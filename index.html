@@ -1,0 +1,797 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BLOQTRIX</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
+<style>
+  /* Layout: una sola pantalla — marcador arriba, tablero 8x8 al centro, bandeja de 3 piezas abajo. Look único oscuro (máquina recreativa de mesa). */
+  :root {
+    color-scheme: dark;
+    --bg: #0e1b33;
+    --bg-2: #13284a;
+    --board: #091428;
+    --cell: #172b4d;
+    --cell-edge: #1f3863;
+    --fg: #e8eefb;
+    --muted: #8ea3c7;
+    --accent: #ffb938;
+    --danger: #ff6b5b;
+
+    --b-amber: #ffb938;
+    --b-sky: #4cc9f0;
+    --b-coral: #ff6b5b;
+    --b-mint: #3ddc97;
+    --b-lilac: #a78bfa;
+    --b-pink: #f472b6;
+    --b-stone: #6b7fa6;
+    --b-teal: #2dd4bf;
+    --b-lime: #b5e655;
+    --b-pearl: #dfe7f7;
+
+    --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+    --font-body: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    --gap: 4px;
+    --tcell: clamp(15px, 5.2vw, 24px);
+  }
+  /* Para que el archivo funcione también abierto directamente en el navegador */
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-size: 14px;
+    background: radial-gradient(120% 80% at 50% 0%, var(--bg-2), var(--bg) 70%) fixed, var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 12px;
+    box-sizing: border-box;
+    overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app {
+    max-width: 460px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(22px, 6vw, 30px); margin: 0; letter-spacing: .02em; line-height: 1;
+    color: var(--fg);
+  }
+  h1 span { color: var(--accent); }
+  .scores { display: flex; gap: 8px; }
+  .score {
+    display: flex; flex-direction: column; align-items: flex-end;
+    padding: 6px 12px; border-radius: 10px; background: var(--board);
+    min-width: 64px;
+  }
+  .score .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .score .val { font-family: var(--font-display); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .score.main .val { color: var(--accent); }
+  .score .val.bump { animation: bump .3s ease-out; }
+  @keyframes bump { 40% { transform: scale(1.25); } }
+
+  .board-wrap { position: relative; width: 100%; max-width: 440px; margin: 0 auto; }
+  .board {
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--gap);
+    padding: 8px; border-radius: 14px; background: var(--board);
+    aspect-ratio: 1; box-sizing: border-box; width: 100%;
+    box-shadow: 0 0 0 1px var(--cell-edge), 0 18px 40px -18px #000;
+    touch-action: none;
+  }
+  .cell {
+    border-radius: 5px; background: var(--cell);
+    box-shadow: inset 0 0 0 1px var(--cell-edge);
+    transition: background-color .08s;
+  }
+  .blk {
+    border-radius: 5px; background: var(--c);
+    box-shadow: inset 0 -4px 0 rgb(0 0 0 / .28), inset 0 3px 0 rgb(255 255 255 / .35);
+  }
+  .cell.preview {
+    background: color-mix(in srgb, var(--c) 45%, var(--cell));
+    box-shadow: inset 0 0 0 2px var(--c);
+  }
+  .cell.will-clear { filter: brightness(1.35) saturate(1.2); box-shadow: inset 0 -4px 0 rgb(0 0 0 / .2), 0 0 10px 1px var(--c); }
+  .cell.preview.will-clear { background: var(--c); }
+  .cell.will-clear:not(.blk):not(.preview) { background: color-mix(in srgb, var(--accent) 22%, var(--cell)); }
+  .cell.clearing { animation: pop .32s ease-in forwards; }
+  @keyframes pop {
+    0% { transform: scale(1); filter: brightness(1.8); }
+    100% { transform: scale(.2); opacity: 0; }
+  }
+
+  .fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 14px; }
+  .float {
+    position: absolute; transform: translate(-50%, -50%);
+    font-family: var(--font-display); font-size: clamp(18px, 6vw, 28px); color: var(--fg);
+    text-shadow: 0 2px 0 rgb(0 0 0 / .5), 0 0 18px var(--accent);
+    white-space: nowrap; animation: rise 1s ease-out forwards; text-align: center; line-height: 1.1;
+  }
+  .float small { display: block; font-size: .55em; color: var(--accent); }
+  @keyframes rise {
+    0% { opacity: 0; transform: translate(-50%, -30%) scale(.7); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    100% { opacity: 0; transform: translate(-50%, -130%) scale(1); }
+  }
+
+  .tray {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    min-height: calc(var(--tcell) * 3 + 2 * 3px + 24px);
+  }
+  .slot {
+    display: grid; place-items: center; padding: 12px 4px;
+    border-radius: 12px; background: rgb(255 255 255 / .03);
+    cursor: grab; touch-action: none; transition: opacity .15s, transform .15s;
+  }
+  .slot:empty { cursor: default; }
+  .slot:not(:empty):hover { background: rgb(255 255 255 / .06); }
+  .slot.lifted > * { opacity: .15; }
+  .slot.nofit { opacity: .35; filter: grayscale(.7); }
+  .slot.spawn > * { animation: spawn .3s ease-out backwards; }
+  .slot.spawn:nth-child(2) > * { animation-delay: .06s; }
+  .slot.spawn:nth-child(3) > * { animation-delay: .12s; }
+  @keyframes spawn { from { transform: scale(.4) translateY(12px); opacity: 0; } }
+  .piece { display: grid; gap: 3px; }
+  .piece > div { width: var(--tcell); height: var(--tcell); }
+  .piece .blk { border-radius: 4px; box-shadow: inset 0 -3px 0 rgb(0 0 0 / .28), inset 0 2px 0 rgb(255 255 255 / .35); }
+
+  .ghost {
+    position: fixed; left: 0; top: 0; z-index: 10; pointer-events: none;
+    display: grid; filter: drop-shadow(0 10px 14px rgb(0 0 0 / .45));
+    will-change: transform;
+  }
+  .ghost.back { transition: transform .18s ease-in, opacity .18s; opacity: 0; }
+
+  footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .meta {
+    margin: -8px 0 0; text-align: center; font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .meta b { color: var(--b-teal); font-weight: 500; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; max-width: 36ch; }
+  button {
+    font: 500 14px var(--font-body); color: var(--fg);
+    background: var(--cell); border: 1px solid var(--cell-edge); border-radius: 999px;
+    padding: 9px 16px; cursor: pointer;
+  }
+  button:hover { background: var(--cell-edge); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); color: #2a1a00; border-color: transparent; font-weight: 700; }
+  button.primary:hover { filter: brightness(1.08); }
+
+  .over {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: rgb(9 20 40 / .82); backdrop-filter: blur(3px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    text-align: center; padding: 16px; animation: fadein .35s ease-out;
+  }
+  .over h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(24px, 8vw, 36px); margin: 0; color: var(--danger); }
+  .over p { margin: 0; color: var(--muted); }
+  .over .final { font-family: var(--font-display); font-size: clamp(36px, 12vw, 56px); color: var(--accent); line-height: 1; }
+  .over .record { color: var(--b-mint); font-weight: 700; }
+  @keyframes fadein { from { opacity: 0; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+
+<div class="app">
+  <header>
+    <h1>BLOQ<span>TRIX</span></h1>
+    <div class="scores">
+      <div class="score main"><span class="lbl">Puntos</span><span class="val" id="score">0</span></div>
+      <div class="score"><span class="lbl">Récord</span><span class="val" id="best">0</span></div>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+    <div class="board" id="board" aria-label="Tablero de 8 por 8"></div>
+    <div class="fx" id="fx"></div>
+    <div class="over" id="over" hidden>
+      <h2>Sin hueco</h2>
+      <p>Ninguna pieza cabe en el tablero.</p>
+      <div class="final" id="final">0</div>
+      <p class="record" id="record" hidden>¡Nuevo récord!</p>
+      <button class="primary" id="again">Jugar otra vez</button>
+    </div>
+  </div>
+
+  <div class="tray" id="tray">
+    <div class="slot" data-i="0"></div>
+    <div class="slot" data-i="1"></div>
+    <div class="slot" data-i="2"></div>
+  </div>
+  <p class="meta" id="meta"></p>
+
+  <footer>
+    <p class="hint">Arrastra las piezas al tablero. Completa filas o columnas para eliminarlas. Varias líneas a la vez multiplican los puntos.</p>
+    <div class="actions">
+      <button id="sound" aria-pressed="true">Sonido: sí</button>
+      <button id="restart">Nueva partida</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const N = 8;
+  const LINE_POINTS = 10;
+
+  // Catálogo de piezas. Para añadir un tipo nuevo, agrega una familia con sus formas
+  // ('#' = casilla ocupada, '.' = hueco). Cada forma es una orientación fija (no se rota).
+  const FAMILIES = [
+    { id: 'sq3', name: 'Cuadrado 3x3', color: 'amber', weight: 0.8, shapes: [
+      ['###', '###', '###'] ] },
+    { id: 'sq2', name: 'Cuadrado 2x2', color: 'sky', weight: 1.2, shapes: [
+      ['##', '##'] ] },
+    { id: 'z', name: 'Z izquierda', color: 'coral', weight: 1, shapes: [
+      ['##.', '.##'] ] },
+    { id: 's', name: 'Z derecha', color: 'mint', weight: 1, shapes: [
+      ['.##', '##.'] ] },
+    { id: 'l', name: 'L', color: 'lilac', weight: 1.3, shapes: [
+      ['#.', '#.', '##'], ['###', '#..'], ['##', '.#', '.#'], ['..#', '###'] ] },
+    { id: 'j', name: 'L invertida', color: 'pink', weight: 1.3, shapes: [
+      ['.#', '.#', '##'], ['#..', '###'], ['##', '#.', '#.'], ['###', '..#'] ] },
+
+    // Piezas de ayuda: nunca salen al azar (weight 0); solo las usa el sistema de ayuda
+    // cuando ninguna combinación de piezas normales cabe en el tablero.
+    { id: 'diag3', name: 'Diagonal de 3', color: 'lime', weight: 0, helper: true, shapes: [
+      ['#..', '.#.', '..#'], ['..#', '.#.', '#..'] ] },
+    { id: 'dom', name: 'Barra de 2', color: 'teal', weight: 0, helper: true, shapes: [
+      ['##'], ['#', '#'] ] },
+    { id: 'diag2', name: 'Diagonal de 2', color: 'lime', weight: 0, helper: true, shapes: [
+      ['#.', '.#'], ['.#', '#.'] ] },
+    { id: 'one', name: 'Cuadrado suelto', color: 'pearl', weight: 0, helper: true, shapes: [
+      ['#'] ] },
+  ];
+  const POOL = FAMILIES.filter(f => f.weight > 0);
+  const HELPERS = FAMILIES.filter(f => f.helper);
+
+  // Ayuda al jugador: las primeras rondas siempre; después, una probabilidad
+  // que empieza en el 80 % y baja un poco cada ronda hasta un mínimo.
+  // forgiveness: fracción mínima de primeras jugadas que deben dejar sitio a las otras dos piezas
+  // (forgivenessEarly se aplica en las rondas garantizadas, más permisivo con el jugador).
+  const ASSIST = { guaranteedRounds: 3, start: 0.8, decayPerRound: 0.03, min: 0.2, forgiveness: 0.75, forgivenessEarly: 0.9 };
+  const assistChance = round => round <= ASSIST.guaranteedRounds ? 1
+    : Math.max(ASSIST.min, ASSIST.start - ASSIST.decayPerRound * (round - ASSIST.guaranteedRounds - 1));
+
+  const parseShape = rows => {
+    const cells = [];
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '#') cells.push([y, x]); }));
+    return { cells, h: rows.length, w: rows[0].length };
+  };
+  const totalWeight = POOL.reduce((s, f) => s + f.weight, 0);
+  function randomPiece() {
+    let r = Math.random() * totalWeight, fam = POOL[0];
+    for (const f of POOL) { if ((r -= f.weight) <= 0) { fam = f; break; } }
+    const shape = fam.shapes[Math.floor(Math.random() * fam.shapes.length)];
+    return { fam: fam.id, color: fam.color, ...parseShape(shape) };
+  }
+
+  // ---------- Motor ----------
+  const idx = (r, c) => r * N + c;
+  const emptyGrid = () => Array(N * N).fill(null);
+
+  function canPlace(grid, p, r, c) {
+    if (r < 0 || c < 0 || r + p.h > N || c + p.w > N) return false;
+    return p.cells.every(([y, x]) => grid[idx(r + y, c + x)] === null);
+  }
+  function fitsAnywhere(grid, p) {
+    for (let r = 0; r <= N - p.h; r++)
+      for (let c = 0; c <= N - p.w; c++)
+        if (canPlace(grid, p, r, c)) return true;
+    return false;
+  }
+  function fullLines(grid) {
+    const rows = [], cols = [];
+    for (let i = 0; i < N; i++) {
+      let rf = true, cf = true;
+      for (let j = 0; j < N; j++) {
+        if (grid[idx(i, j)] === null) rf = false;
+        if (grid[idx(j, i)] === null) cf = false;
+      }
+      if (rf) rows.push(i);
+      if (cf) cols.push(i);
+    }
+    return { rows, cols };
+  }
+  function withPiece(grid, p, r, c) {
+    const g = grid.slice();
+    p.cells.forEach(([y, x]) => { g[idx(r + y, c + x)] = p.color; });
+    return g;
+  }
+  function lineCells({ rows, cols }) {
+    const set = new Set();
+    rows.forEach(r => { for (let c = 0; c < N; c++) set.add(idx(r, c)); });
+    cols.forEach(c => { for (let r = 0; r < N; r++) set.add(idx(r, c)); });
+    return set;
+  }
+
+  // Tablero inicial: unas cuantas piezas repartidas sin completar ninguna línea.
+  function seedGrid() {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      let grid = emptyGrid(), placed = 0;
+      for (let tries = 0; tries < 300 && placed < 5; tries++) {
+        const p = randomPiece();
+        if (p.fam === 'sq3') continue;
+        const r = Math.floor(Math.random() * (N - p.h + 1));
+        const c = Math.floor(Math.random() * (N - p.w + 1));
+        if (!canPlace(grid, p, r, c)) continue;
+        const g = withPiece(grid, p, r, c).map(v => v && 'stone');
+        const { rows, cols } = fullLines(g);
+        if (rows.length || cols.length) continue;
+        grid = g; placed++;
+      }
+      const filled = grid.filter(Boolean).length;
+      if (filled >= 14 && filled <= 24) return grid;
+    }
+    return emptyGrid();
+  }
+  // ---------- Reparto de piezas ----------
+  const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+  const variantsOf = fams => fams.flatMap(f => f.shapes.map(s => ({ fam: f.id, color: f.color, ...parseShape(s) })));
+  const randomTray = () => [randomPiece(), randomPiece(), randomPiece()];
+
+  // Coloca la pieza y elimina las líneas que se completen (simulación del turno).
+  function applyMove(grid, p, r, c) {
+    const g = withPiece(grid, p, r, c);
+    lineCells(fullLines(g)).forEach(k => { g[k] = null; });
+    return g;
+  }
+  function spotsFor(grid, p) {
+    const out = [];
+    for (let r = 0; r <= N - p.h; r++)
+      for (let c = 0; c <= N - p.w; c++)
+        if (canPlace(grid, p, r, c)) out.push({ r, c });
+    return out;
+  }
+  // ¿Existe algún orden y posiciones para colocar TODAS las piezas una tras otra?
+  function canPlaceAll(grid, pieces, budget) {
+    if (!pieces.length) return true;
+    for (let i = 0; i < pieces.length; i++) {
+      const rest = pieces.filter((_, j) => j !== i);
+      for (const { r, c } of spotsFor(grid, pieces[i])) {
+        if (--budget.n < 0) return false;
+        if (canPlaceAll(applyMove(grid, pieces[i], r, c), rest, budget)) return true;
+      }
+    }
+    return false;
+  }
+  // Construye la bandeja pieza a pieza sobre un tablero simulado: primero intenta
+  // piezas normales y, si ninguna cabe, recurre a las de ayuda (de mayor a menor).
+  function buildFittingTray(grid) {
+    let g = grid;
+    const tray = [];
+    for (let s = 0; s < 3; s++) {
+      const candidates = [
+        ...Array.from({ length: 12 }, randomPiece),
+        ...shuffle(variantsOf(POOL)),
+        ...shuffle(variantsOf(HELPERS)).sort((a, b) => b.cells.length - a.cells.length),
+      ];
+      let chosen = null, spots = [];
+      for (const p of candidates) { spots = spotsFor(g, p); if (spots.length) { chosen = p; break; } }
+      if (!chosen) { tray.push(randomPiece()); continue; } // tablero lleno: no debería ocurrir
+      // si algún hueco completa líneas, lo usa (ayuda a que la partida respire)
+      const clearing = spots.filter(({ r, c }) => { const l = fullLines(withPiece(g, chosen, r, c)); return l.rows.length + l.cols.length > 0; });
+      const pick = (clearing.length ? clearing : spots)[Math.floor(Math.random() * (clearing.length || spots.length))];
+      tray.push(chosen);
+      g = applyMove(g, chosen, pick.r, pick.c);
+    }
+    return shuffle(tray);
+  }
+  // Margen de error de una bandeja: de todas las primeras jugadas posibles (pieza + hueco),
+  // qué fracción deja hueco para colocar las otras dos. 1 = imposible equivocarse.
+  function forgiveness(grid, tray) {
+    let ok = 0, total = 0;
+    for (let i = 0; i < tray.length; i++) {
+      const rest = tray.filter((_, j) => j !== i);
+      for (const { r, c } of spotsFor(grid, tray[i])) {
+        total++;
+        if (canPlaceAll(applyMove(grid, tray[i], r, c), rest, { n: 800 })) ok++;
+      }
+    }
+    return total ? ok / total : 0;
+  }
+  const randomHelper = () => { const v = variantsOf(HELPERS); return v[Math.floor(Math.random() * v.length)]; };
+
+  // Bandeja con ayuda: busca 3 piezas que quepan todas y que además perdonen
+  // jugadas poco precisas. Empieza con piezas normales al azar y, si el tablero
+  // está apretado, va metiendo piezas de ayuda (1, 2 o 3 casillas) hasta lograrlo.
+  function assistedTray(grid, minForgiveness) {
+    const ladder = [
+      [25, () => randomTray()],
+      [15, () => shuffle([randomPiece(), randomPiece(), randomHelper()])],
+      [15, () => shuffle([randomPiece(), randomHelper(), randomHelper()])],
+      [15, () => [randomHelper(), randomHelper(), randomHelper()]],
+    ];
+    for (const [tries, make] of ladder) {
+      for (let k = 0; k < tries; k++) {
+        const t = make();
+        if (canPlaceAll(grid, t, { n: 4000 }) && forgiveness(grid, t) >= minForgiveness) return t;
+      }
+    }
+    return buildFittingTray(grid);
+  }
+  function dealTray() {
+    state.round = (state.round || 0) + 1;
+    state.assisted = Math.random() < assistChance(state.round);
+    const early = state.round <= ASSIST.guaranteedRounds;
+    state.tray = state.assisted ? assistedTray(state.grid, early ? ASSIST.forgivenessEarly : ASSIST.forgiveness) : randomTray();
+  }
+
+  // ---------- Estado ----------
+  let state;
+  let best = 0;
+  try { best = +localStorage.getItem('bloques-best') || 0; } catch (e) {}
+
+  function newGame() {
+    const grid = seedGrid();
+    state = { grid, tray: [], round: 0, assisted: false, score: 0, over: false, newRecord: false, bestAtStart: best };
+    dealTray();
+  }
+
+  // ---------- Vista ----------
+  const boardEl = document.getElementById('board');
+  const fxEl = document.getElementById('fx');
+  const trayEl = document.getElementById('tray');
+  const slots = [...trayEl.children];
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const overEl = document.getElementById('over');
+  const cellsEl = [];
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    boardEl.append(d);
+    cellsEl.push(d);
+  }
+  const colorVar = name => `var(--b-${name})`;
+
+  function renderBoard(preview) {
+    const prevSet = new Map();
+    let clearSet = new Set();
+    if (preview) {
+      preview.p.cells.forEach(([y, x]) => prevSet.set(idx(preview.r + y, preview.c + x), preview.p.color));
+      clearSet = lineCells(fullLines(withPiece(state.grid, preview.p, preview.r, preview.c)));
+    }
+    cellsEl.forEach((el, i) => {
+      const v = state.grid[i];
+      const pv = prevSet.get(i);
+      let cls = 'cell';
+      let color = v || pv;
+      if (v) cls += ' blk';
+      else if (pv) cls += ' preview';
+      if (clearSet.has(i)) cls += ' will-clear';
+      if (el.className !== cls) el.className = cls;
+      if (color) el.style.setProperty('--c', colorVar(color)); else el.style.removeProperty('--c');
+    });
+  }
+
+  function buildPiece(p, cls) {
+    const el = document.createElement('div');
+    el.className = cls;
+    el.style.gridTemplateColumns = `repeat(${p.w}, auto)`;
+    const on = new Set(p.cells.map(([y, x]) => y * p.w + x));
+    for (let k = 0; k < p.w * p.h; k++) {
+      const d = document.createElement('div');
+      if (on.has(k)) { d.className = 'blk'; d.style.setProperty('--c', colorVar(p.color)); }
+      el.append(d);
+    }
+    return el;
+  }
+
+  function renderTray(spawn) {
+    slots.forEach((slot, i) => {
+      slot.replaceChildren();
+      slot.classList.remove('lifted', 'nofit', 'spawn');
+      const p = state.tray[i];
+      if (!p) { slot.removeAttribute('aria-label'); return; }
+      slot.append(buildPiece(p, 'piece'));
+      const fam = FAMILIES.find(f => f.id === p.fam);
+      slot.setAttribute('aria-label', fam ? fam.name : 'Pieza');
+      if (!fitsAnywhere(state.grid, p)) slot.classList.add('nofit');
+    });
+    if (spawn) { void trayEl.offsetWidth; slots.forEach(s => s.classList.add('spawn')); }
+    // Indicador de la POC para ajustar la dificultad
+    const round = state.round || 1;
+    document.getElementById('meta').innerHTML =
+      `Ronda ${round} · ayuda ${Math.round(assistChance(round) * 100)} % · ` +
+      (state.assisted ? '<b>esta ronda con ayuda</b>' : 'esta ronda al azar');
+  }
+
+  function renderScore(bump) {
+    scoreEl.textContent = state.score;
+    bestEl.textContent = Math.max(best, state.score);
+    if (bump) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
+  }
+
+  function renderOver() {
+    overEl.hidden = !state.over;
+    if (state.over) {
+      document.getElementById('final').textContent = state.score;
+      document.getElementById('record').hidden = !state.newRecord;
+    }
+  }
+
+  function renderAll(spawn) { renderBoard(); renderTray(spawn); renderScore(); renderOver(); }
+
+  function floatText(html, x, y) {
+    const f = document.createElement('div');
+    f.className = 'float';
+    f.innerHTML = html;
+    f.style.left = x + '%';
+    f.style.top = y + '%';
+    fxEl.append(f);
+    setTimeout(() => f.remove(), 1000);
+  }
+
+  // ---------- Sonido (sintetizado con Web Audio, sin archivos) ----------
+  let actx = null;
+  let muted = false;
+  try { muted = localStorage.getItem('bloques-muted') === '1'; } catch (e) {}
+
+  function audio() {
+    if (muted) return null;
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      actx = new AC();
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+
+  // Golpe seco de bloque al encajar: tono grave que cae + chasquido corto.
+  function sfxPlace() {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(240, t);
+    o.frequency.exponentialRampToValueAtTime(90, t + 0.09);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + 0.14);
+
+    const len = Math.floor(a.sampleRate * 0.03);
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), ng = a.createGain();
+    src.buffer = buf;
+    f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
+    ng.gain.value = 0.3;
+    src.connect(f).connect(ng).connect(a.destination);
+    src.start(t);
+  }
+
+  function chime(a, freq, t, vol) {
+    const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    o2.type = 'triangle'; o2.frequency.value = freq * 2;
+    const g2 = a.createGain(); g2.gain.value = 0.25;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    o.connect(g); o2.connect(g2).connect(g); g.connect(a.destination);
+    o.start(t); o2.start(t); o.stop(t + 0.5); o2.stop(t + 0.5);
+  }
+
+  // Recompensa por línea: arpegio corto. Con varias líneas suena una vez por línea,
+  // cada repetición más aguda (escala pentatónica desde Do5).
+  const LINE_STEPS = [0, 4, 7, 12, 16, 19, 24, 28];
+  function sfxLines(n) {
+    const a = audio(); if (!a) return;
+    const start = a.currentTime + 0.08;
+    for (let k = 0; k < n; k++) {
+      const root = 523.25 * Math.pow(2, LINE_STEPS[Math.min(k, LINE_STEPS.length - 1)] / 12);
+      const t = start + k * 0.16;
+      chime(a, root, t, 0.22);
+      chime(a, root * 1.25, t + 0.045, 0.16);
+      chime(a, root * 1.5, t + 0.09, 0.14);
+    }
+  }
+
+  // Game Over: el clásico "wah wah wah waaah" de trombón triste.
+  // Cuatro notas descendentes por semitonos; la última, larga y con vibrato.
+  function sfxGameOver(delay) {
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + (delay || 0);
+    const notes = [
+      { f: 233.08, at: 0.00, len: 0.38 }, // Si♭3
+      { f: 220.00, at: 0.45, len: 0.38 }, // La3
+      { f: 207.65, at: 0.90, len: 0.38 }, // La♭3
+      { f: 196.00, at: 1.35, len: 1.30, vib: true }, // Sol3
+    ];
+    const lp = a.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1100; lp.Q.value = 2;
+    lp.connect(a.destination);
+    notes.forEach(n => {
+      const t = t0 + n.at;
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sawtooth';
+      // cada nota "cae" un poco al final, como un trombón que se desinfla
+      o.frequency.setValueAtTime(n.f, t);
+      o.frequency.linearRampToValueAtTime(n.f * 0.97, t + n.len);
+      if (n.vib) {
+        const lfo = a.createOscillator(), lg = a.createGain();
+        lfo.frequency.value = 5.5; lg.gain.value = 4;
+        lfo.connect(lg).connect(o.frequency);
+        lfo.start(t + 0.25); lfo.stop(t + n.len);
+      }
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.04);
+      g.gain.setValueAtTime(0.16, t + n.len * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + n.len);
+      o.connect(g).connect(lp);
+      o.start(t); o.stop(t + n.len + 0.02);
+    });
+  }
+
+  // Empezar partida: arpegio mayor rápido que sube (Do-Mi-Sol-Do) y acaba en un acorde brillante.
+  function sfxStart() {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + 0.02;
+    [523.25, 659.25, 783.99].forEach((f, i) => chime(a, f, t + i * 0.07, 0.18));
+    const end = t + 0.21;
+    [1046.5, 1318.5, 1568].forEach(f => chime(a, f, end, 0.14));
+    // brillo extra: una nota aguda que sube al final
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(1046.5, end);
+    o.frequency.exponentialRampToValueAtTime(2093, end + 0.12);
+    g.gain.setValueAtTime(0.0001, end);
+    g.gain.exponentialRampToValueAtTime(0.05, end + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, end + 0.25);
+    o.connect(g).connect(a.destination);
+    o.start(end); o.stop(end + 0.26);
+  }
+
+  const soundBtn = document.getElementById('sound');
+  function renderSound() {
+    soundBtn.textContent = muted ? 'Sonido: no' : 'Sonido: sí';
+    soundBtn.setAttribute('aria-pressed', String(!muted));
+  }
+  soundBtn.addEventListener('click', () => {
+    muted = !muted;
+    try { localStorage.setItem('bloques-muted', muted ? '1' : '0'); } catch (e) {}
+    renderSound();
+    if (!muted) sfxPlace();
+  });
+  renderSound();
+
+  // ---------- Jugada ----------
+  function place(i, r, c) {
+    const p = state.tray[i];
+    state.grid = withPiece(state.grid, p, r, c);
+    state.tray[i] = null;
+    state.score += p.cells.length;
+
+    const lines = fullLines(state.grid);
+    const n = lines.rows.length + lines.cols.length;
+    const clearing = lineCells(lines);
+    sfxPlace();
+    if (n) sfxLines(n);
+    if (n) {
+      const gain = LINE_POINTS * n * n; // 10 por línea × nº de líneas simultáneas
+      state.score += gain;
+      // centro aproximado de las líneas eliminadas, para el texto flotante
+      let sy = 0, sx = 0;
+      clearing.forEach(k => { sy += Math.floor(k / N); sx += k % N; });
+      const cy = (sy / clearing.size + .5) / N * 100, cx = (sx / clearing.size + .5) / N * 100;
+      const label = n === 1 ? '' : n === 2 ? '¡Doble!' : n === 3 ? '¡Triple!' : `¡Combo x${n}!`;
+      floatText(`+${gain}${label ? `<small>${label}</small>` : ''}`, Math.min(80, Math.max(20, cx)), Math.min(80, Math.max(20, cy)));
+    }
+
+    // pinta la pieza colocada y anima las casillas que se eliminan
+    renderBoard();
+    if (n) {
+      clearing.forEach(k => cellsEl[k].classList.add('clearing'));
+      clearing.forEach(k => { state.grid[k] = null; });
+    }
+
+    const spawn = state.tray.every(t => t === null);
+    if (spawn) dealTray();
+    const remaining = state.tray.filter(Boolean);
+    state.over = remaining.every(t => !fitsAnywhere(state.grid, t));
+    if (state.over) sfxGameOver(n ? 0.25 + n * 0.16 + 0.3 : 0.35); // espera a que acaben los otros sonidos
+    if (state.over && state.score > (state.bestAtStart || 0)) state.newRecord = true;
+    if (state.score > best) {
+      best = state.score;
+      try { localStorage.setItem('bloques-best', best); } catch (e) {}
+    }
+    renderScore(true);
+    renderTray(spawn);
+    setTimeout(() => { renderBoard(); renderOver(); }, n ? 330 : 0);
+  }
+
+  // ---------- Arrastrar y soltar ----------
+  let drag = null;
+
+  trayEl.addEventListener('pointerdown', e => {
+    const slot = e.target.closest('.slot');
+    if (!slot || drag || state.over) return;
+    const i = +slot.dataset.i;
+    const p = state.tray[i];
+    if (!p) return;
+    e.preventDefault();
+    audio(); // desbloquea el audio con el primer gesto del jugador
+    const a = cellsEl[0].getBoundingClientRect();
+    const b = cellsEl[1].getBoundingClientRect();
+    const size = a.width, pitch = b.left - a.left, gap = pitch - size;
+    const ghost = buildPiece(p, 'ghost');
+    ghost.style.gap = gap + 'px';
+    ghost.querySelectorAll(':scope > div').forEach(d => { d.style.width = d.style.height = size + 'px'; });
+    document.body.append(ghost);
+    slot.classList.add('lifted');
+    drag = { i, p, slot, ghost, size, pitch, gap, touch: e.pointerType !== 'mouse', pos: null, id: e.pointerId };
+    moveDrag(e);
+  });
+
+  function moveDrag(e) {
+    const { p, pitch, gap, ghost, touch } = drag;
+    const w = p.w * pitch - gap, h = p.h * pitch - gap;
+    const left = e.clientX - w / 2;
+    const top = touch ? e.clientY - h - 48 : e.clientY - h / 2; // en táctil la pieza va por encima del dedo
+    ghost.style.transform = `translate(${left}px, ${top}px)`;
+    const o = cellsEl[0].getBoundingClientRect();
+    const c = Math.round((left - o.left) / pitch);
+    const r = Math.round((top - o.top) / pitch);
+    const pos = canPlace(state.grid, p, r, c) ? { r, c } : null;
+    if (JSON.stringify(pos) !== JSON.stringify(drag.pos)) {
+      drag.pos = pos;
+      renderBoard(pos ? { p, r, c } : null);
+    }
+  }
+
+  function endDrag(commit) {
+    const d = drag; drag = null;
+    if (commit && d.pos) {
+      d.ghost.remove();
+      place(d.i, d.pos.r, d.pos.c);
+    } else {
+      const s = d.slot.getBoundingClientRect();
+      const g = d.ghost.getBoundingClientRect();
+      d.ghost.classList.add('back');
+      d.ghost.style.transform = `translate(${s.left + s.width / 2 - g.width / 2}px, ${s.top + s.height / 2 - g.height / 2}px) scale(.5)`;
+      setTimeout(() => { d.ghost.remove(); d.slot.classList.remove('lifted'); }, 180);
+      renderBoard();
+    }
+  }
+
+  window.addEventListener('pointermove', e => { if (drag && e.pointerId === drag.id) moveDrag(e); });
+  window.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) endDrag(true); });
+  window.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.id) endDrag(false); });
+
+  function restart() {
+    if (drag) { drag.ghost.remove(); drag = null; }
+    fxEl.replaceChildren();
+    sfxStart();
+    newGame();
+    renderAll(true);
+  }
+  document.getElementById('restart').addEventListener('click', restart);
+  document.getElementById('again').addEventListener('click', restart);
+
+  // ---------- Arranque (conserva la partida si la página se actualiza) ----------
+  function start(data) {
+    if (data && data.state && data.state.grid) state = data.state; else newGame();
+    renderAll(true);
+  }
+  if (typeof window.claude?.hot?.snapshot === 'function') window.claude.hot.snapshot(() => ({ state }));
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+
+  // Hook de depuración para pruebas
+  window.__bloques = { get state() { return state; }, place, canPlace, fitsAnywhere, FAMILIES };
+})();
+</script>

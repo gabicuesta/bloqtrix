@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
 <style>
-  /* Layout: una sola pantalla — marcador arriba, tablero 8x8 al centro, bandeja de 3 piezas abajo. Look único oscuro (máquina recreativa de mesa). */
+  /* Layout: una sola pantalla — marcador arriba, tablero 8x8 al centro, racha y ayudas, bandeja de 3 piezas abajo. Look único oscuro (máquina recreativa de mesa). */
   :root {
     color-scheme: dark;
     --bg: #0e1b33;
@@ -31,6 +31,11 @@
     --b-pearl: #dfe7f7;
     --b-indigo: #6d7dff;
     --b-orange: #ff8f3a;
+
+    --rock-1: #8d95a8;
+    --rock-2: #737c90;
+    --crack: #0a0e18;
+    --spark: #fff6c2;
 
     --font-display: "Bungee", "Arial Black", Impact, sans-serif;
     --font-body: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -57,7 +62,7 @@
   }
   .app {
     max-width: 460px; margin: 0 auto;
-    display: flex; flex-direction: column; gap: 16px;
+    display: flex; flex-direction: column; gap: 14px;
   }
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 {
@@ -75,7 +80,7 @@
   .score .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
   .score .val { font-family: var(--font-display); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
   .score.main .val { color: var(--accent); }
-  .score .val.bump { animation: bump .3s ease-out; }
+  .bump { animation: bump .3s ease-out; }
   @keyframes bump { 40% { transform: scale(1.25); } }
 
   .board-wrap { position: relative; width: 100%; max-width: 440px; margin: 0 auto; }
@@ -87,6 +92,7 @@
     touch-action: none;
   }
   .cell {
+    position: relative;
     border-radius: 5px; background: var(--cell);
     box-shadow: inset 0 0 0 1px var(--cell-edge);
     transition: background-color .08s;
@@ -99,7 +105,7 @@
     background: color-mix(in srgb, var(--c) 45%, var(--cell));
     box-shadow: inset 0 0 0 2px var(--c);
   }
-  .cell.will-clear { filter: brightness(1.35) saturate(1.2); box-shadow: inset 0 -4px 0 rgb(0 0 0 / .2), 0 0 10px 1px var(--c); }
+  .cell.will-clear { filter: brightness(1.35) saturate(1.2); box-shadow: inset 0 -4px 0 rgb(0 0 0 / .2), 0 0 10px 1px var(--c, var(--accent)); }
   .cell.preview.will-clear { background: var(--c); }
   .cell.will-clear:not(.blk):not(.preview) { background: color-mix(in srgb, var(--accent) 22%, var(--cell)); }
   .cell.clearing { animation: pop .32s ease-in forwards; }
@@ -107,20 +113,46 @@
     0% { transform: scale(1); filter: brightness(1.8); }
     100% { transform: scale(.2); opacity: 0; }
   }
+  .cell.boom { animation: boom .42s ease-out forwards; }
+  @keyframes boom {
+    0% { background: var(--spark); transform: scale(1.15); }
+    100% { background: var(--b-orange); transform: scale(.1); opacity: 0; }
+  }
+  .cell.crack-hit { animation: shake .3s ease-in-out; }
+  @keyframes shake { 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
 
   .fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 14px; }
   .float {
     position: absolute; transform: translate(-50%, -50%);
     font-family: var(--font-display); font-size: clamp(18px, 6vw, 28px); color: var(--fg);
     text-shadow: 0 2px 0 rgb(0 0 0 / .5), 0 0 18px var(--accent);
-    white-space: nowrap; animation: rise 1s ease-out forwards; text-align: center; line-height: 1.1;
+    white-space: nowrap; animation: rise 1.1s ease-out forwards; text-align: center; line-height: 1.1;
   }
   .float small { display: block; font-size: .55em; color: var(--accent); }
+  .float.extra { font-size: clamp(14px, 4.4vw, 19px); color: var(--accent); }
   @keyframes rise {
     0% { opacity: 0; transform: translate(-50%, -30%) scale(.7); }
     20% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
     100% { opacity: 0; transform: translate(-50%, -130%) scale(1); }
   }
+
+  /* Racha y ayudas */
+  .powers { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .streak { display: flex; align-items: baseline; gap: 6px; color: var(--muted); }
+  .streak .lbl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .streak b { display: inline-block; font-family: var(--font-display); font-weight: 400; font-size: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .streak.on b { color: var(--b-orange); text-shadow: 0 0 12px var(--b-orange); }
+  .power-btns { display: flex; gap: 8px; }
+  .power { display: inline-flex; align-items: center; gap: 8px; padding: 6px 7px 6px 14px; }
+  .power b {
+    display: grid; place-items: center; min-width: 22px; height: 22px; border-radius: 999px;
+    background: var(--board); color: var(--accent); font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+  .power:disabled { opacity: .4; cursor: default; }
+  .power:disabled:hover { background: var(--cell); }
+  .power[aria-pressed="true"] { background: var(--accent); color: #2a1a00; border-color: transparent; }
+  .power.pulse { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgb(255 185 56 / .35); } }
 
   .tray {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
@@ -135,29 +167,48 @@
   .slot:not(:empty):hover { background: rgb(255 255 255 / .06); }
   .slot.lifted > * { opacity: .15; }
   .slot.nofit { opacity: .35; filter: grayscale(.7); }
+  .tray.rotating .slot:not(:empty) { outline: 2px dashed var(--accent); outline-offset: -4px; cursor: pointer; opacity: 1; filter: none; }
   .slot.spawn > * { animation: spawn .3s ease-out backwards; }
   .slot.spawn:nth-child(2) > * { animation-delay: .06s; }
   .slot.spawn:nth-child(3) > * { animation-delay: .12s; }
   @keyframes spawn { from { transform: scale(.4) translateY(12px); opacity: 0; } }
   .piece { display: grid; gap: 3px; }
-  .piece > div { width: var(--tcell); height: var(--tcell); }
+  .piece > div { position: relative; width: var(--tcell); height: var(--tcell); }
   .piece .blk { border-radius: 4px; box-shadow: inset 0 -3px 0 rgb(0 0 0 / .28), inset 0 2px 0 rgb(255 255 255 / .35); }
+  .stuck { margin: -6px 0 0; text-align: center; color: var(--accent); font-size: 13px; font-weight: 500; }
 
   .ghost {
     position: fixed; left: 0; top: 0; z-index: 10; pointer-events: none;
     display: grid; filter: drop-shadow(0 10px 14px rgb(0 0 0 / .45));
     will-change: transform;
   }
+  .ghost > div { position: relative; }
   .ghost.back { transition: transform .18s ease-in, opacity .18s; opacity: 0; }
 
-  footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .meta {
-    margin: -8px 0 0; text-align: center; font-size: 11px; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--muted); font-variant-numeric: tabular-nums;
+  /* Casillas especiales (van después de .piece .blk para ganar en la cascada) */
+  /* Bomba en pixel art: los sprites se generan en el script (ver BOMB_SPRITE) */
+  .blk.bomb::after, .blk.bomb::before {
+    content: ""; position: absolute; inset: 6%;
+    background: var(--bomb-sprite) center / contain no-repeat;
+    image-rendering: pixelated;
   }
-  .meta b { color: var(--b-teal); font-weight: 500; }
+  .blk.bomb::before { z-index: 1; background-image: var(--spark-a); animation: spark .36s steps(1) infinite; }
+  @keyframes spark { 50% { background-image: var(--spark-b); } }
+  .blk.stone {
+    background: repeating-linear-gradient(135deg, var(--rock-1) 0 5px, var(--rock-2) 5px 10px);
+    box-shadow: inset 0 -4px 0 rgb(0 0 0 / .35), inset 0 3px 0 rgb(255 255 255 / .2), inset 0 0 0 1px rgb(0 0 0 / .25);
+  }
+  .blk.stone.cracked::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background:
+      linear-gradient(60deg, transparent 46%, var(--crack) 47% 51%, transparent 52%),
+      linear-gradient(-35deg, transparent 55%, var(--crack) 56% 59%, transparent 60%);
+    opacity: .75;
+  }
+
+  footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; max-width: 36ch; }
+  .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; max-width: 38ch; }
   button {
     font: 500 14px var(--font-body); color: var(--fg);
     background: var(--cell); border: 1px solid var(--cell-edge); border-radius: 999px;
@@ -169,19 +220,23 @@
   button.primary:hover { filter: brightness(1.08); }
 
   .over {
-    position: absolute; inset: 0; border-radius: 14px;
-    background: rgb(9 20 40 / .82); backdrop-filter: blur(3px);
+    position: absolute; inset: 0; border-radius: 14px; overflow: auto;
+    background: rgb(9 20 40 / .86); backdrop-filter: blur(3px);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-    text-align: center; padding: 16px; animation: fadein .35s ease-out;
+    text-align: center; padding: 16px; box-sizing: border-box; animation: fadein .35s ease-out;
   }
-  .over h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(24px, 8vw, 36px); margin: 0; color: var(--danger); }
+  .over h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 7vw, 32px); margin: 0; color: var(--danger); line-height: 1; }
   .over p { margin: 0; color: var(--muted); }
-  .over .final { font-family: var(--font-display); font-size: clamp(36px, 12vw, 56px); color: var(--accent); line-height: 1; }
+  .over .final { font-family: var(--font-display); font-size: clamp(34px, 11vw, 52px); color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
   .over .record { color: var(--b-mint); font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0; width: 100%; max-width: 330px; }
+  .stats div { background: rgb(255 255 255 / .05); border-radius: 10px; padding: 7px 4px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .stats dt { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .stats dd { margin: 0; font-family: var(--font-display); font-size: clamp(15px, 4.6vw, 19px); color: var(--fg); font-variant-numeric: tabular-nums; }
   @keyframes fadein { from { opacity: 0; } }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   }
 </style>
 
@@ -199,10 +254,20 @@
     <div class="fx" id="fx"></div>
     <div class="over" id="over" hidden>
       <h2>Sin hueco</h2>
-      <p>Ninguna pieza cabe en el tablero.</p>
       <div class="final" id="final">0</div>
       <p class="record" id="record" hidden>¡Nuevo récord!</p>
+      <dl class="stats" id="stats"></dl>
       <button class="primary" id="again">Jugar otra vez</button>
+    </div>
+  </div>
+
+  <div class="powers">
+    <div class="streak" id="streak" title="Haz líneas en jugadas seguidas para multiplicar los puntos">
+      <span class="lbl">Racha</span><b id="streakN">x0</b>
+    </div>
+    <div class="power-btns">
+      <button class="power" id="swap" title="Cambia las piezas que te quedan por otras nuevas">Cambiar <b id="swapN">1</b></button>
+      <button class="power" id="rotate" aria-pressed="false" title="Toca después una pieza para girarla 90°">Girar <b id="rotN">1</b></button>
     </div>
   </div>
 
@@ -211,10 +276,10 @@
     <div class="slot" data-i="1"></div>
     <div class="slot" data-i="2"></div>
   </div>
-  <p class="meta" id="meta"></p>
+  <p class="stuck" id="stuck" hidden>No cabe ninguna pieza: usa Cambiar o Girar.</p>
 
   <footer>
-    <p class="hint">Arrastra las piezas al tablero. Completa filas o columnas para eliminarlas. Varias líneas a la vez multiplican los puntos.</p>
+    <p class="hint">Arrastra las piezas y completa filas o columnas. Encadena líneas en jugadas seguidas para subir la racha. Las bombas arrasan su zona y la piedra aguanta dos líneas.</p>
     <div class="actions">
       <button id="sound" aria-pressed="true">Sonido: sí</button>
       <button id="restart">Nueva partida</button>
@@ -227,8 +292,17 @@
   const N = 8;
   const LINE_POINTS = 10;
 
+  // Puntos extra
+  const BONUS = { monoLine: 100, cleanBoard: 300, perBombCell: 2, maxStreak: 8 };
+  // Ayudas que gana el jugador: Cambiar cada 3 de racha (y al limpiar el tablero), Girar cada 8 líneas.
+  const POWERS = { startSwaps: 1, startRotates: 1, max: 3, swapEveryStreak: 3, rotateEveryLines: 8 };
+  // Casillas especiales: bombas desde la ronda 2; piedra desde la 5, cada vez más frecuente.
+  const SPECIAL = { bombFrom: 2, bombChance: 0.25, stoneFrom: 5, stoneStart: 0.15, stonePerRound: 0.03, stoneMax: 0.5 };
+  const stoneChance = round => round < SPECIAL.stoneFrom ? 0
+    : Math.min(SPECIAL.stoneMax, SPECIAL.stoneStart + SPECIAL.stonePerRound * (round - SPECIAL.stoneFrom));
+
   // Catálogo de piezas. Para añadir un tipo nuevo, agrega una familia con sus formas
-  // ('#' = casilla ocupada, '.' = hueco). Cada forma es una orientación fija (no se rota).
+  // ('#' = casilla ocupada, '.' = hueco). Cada forma es una orientación fija.
   const FAMILIES = [
     { id: 'sq3', name: 'Cuadrado 3x3', color: 'amber', weight: 0.8, shapes: [
       ['###', '###', '###'] ] },
@@ -283,6 +357,7 @@
   }
 
   // ---------- Motor ----------
+  // Cada casilla del tablero es null (vacía) o { c: color, k?: 'bomb' | 'stone', hp?: golpes que aguanta }.
   const idx = (r, c) => r * N + c;
   const emptyGrid = () => Array(N * N).fill(null);
 
@@ -309,16 +384,61 @@
     }
     return { rows, cols };
   }
+  function makeCell(color, kind) {
+    if (kind === 'stone') return { c: 'stone', k: 'stone', hp: 2 };
+    if (kind === 'bomb') return { c: color, k: 'bomb' };
+    return { c: color };
+  }
   function withPiece(grid, p, r, c) {
     const g = grid.slice();
-    p.cells.forEach(([y, x]) => { g[idx(r + y, c + x)] = p.color; });
+    p.cells.forEach(([y, x], j) => { g[idx(r + y, c + x)] = makeCell(p.color, p.kinds && p.kinds[j]); });
     return g;
   }
+  const rowCells = r => Array.from({ length: N }, (_, c) => idx(r, c));
+  const colCells = c => Array.from({ length: N }, (_, r) => idx(r, c));
   function lineCells({ rows, cols }) {
     const set = new Set();
-    rows.forEach(r => { for (let c = 0; c < N; c++) set.add(idx(r, c)); });
-    cols.forEach(c => { for (let r = 0; r < N; r++) set.add(idx(r, c)); });
+    rows.forEach(r => rowCells(r).forEach(k => set.add(k)));
+    cols.forEach(c => colCells(c).forEach(k => set.add(k)));
     return set;
+  }
+
+  // Resuelve las líneas completas: la piedra entera se agrieta en vez de romperse,
+  // las bombas que caen arrasan su zona de 3x3 (en cadena) y se cuentan las líneas de un solo color.
+  function resolveClear(grid, lines) {
+    const g = grid.slice();
+    const removed = new Set(), cracked = new Set(), boom = new Set();
+    lineCells(lines).forEach(k => {
+      const v = g[k];
+      if (v.k === 'stone' && v.hp > 1) cracked.add(k); else removed.add(k);
+    });
+    const queue = [...removed].filter(k => g[k].k === 'bomb');
+    const exploded = new Set();
+    while (queue.length) {
+      const b = queue.pop();
+      if (exploded.has(b)) continue;
+      exploded.add(b);
+      const br = Math.floor(b / N), bc = b % N;
+      for (let dr = -1; dr <= 1; dr++)
+        for (let dc = -1; dc <= 1; dc++) {
+          const rr = br + dr, cc = bc + dc;
+          if (rr < 0 || cc < 0 || rr >= N || cc >= N) continue;
+          const k = idx(rr, cc);
+          if (!g[k] || removed.has(k)) continue;
+          removed.add(k); boom.add(k); cracked.delete(k);
+          if (g[k].k === 'bomb') queue.push(k);
+        }
+    }
+    let mono = 0;
+    const isMono = cells => {
+      const c0 = grid[cells[0]].c;
+      return c0 !== 'stone' && cells.every(k => grid[k].c === c0);
+    };
+    lines.rows.forEach(r => { if (isMono(rowCells(r))) mono++; });
+    lines.cols.forEach(c => { if (isMono(colCells(c))) mono++; });
+    removed.forEach(k => { g[k] = null; });
+    cracked.forEach(k => { g[k] = { ...g[k], hp: 1 }; });
+    return { grid: g, removed, cracked, boom, bombs: exploded.size, mono };
   }
 
   // Tablero inicial: unas cuantas piezas repartidas sin completar ninguna línea.
@@ -331,7 +451,7 @@
         const r = Math.floor(Math.random() * (N - p.h + 1));
         const c = Math.floor(Math.random() * (N - p.w + 1));
         if (!canPlace(grid, p, r, c)) continue;
-        const g = withPiece(grid, p, r, c).map(v => v && 'stone');
+        const g = withPiece(grid, p, r, c).map(v => v && { c: 'stone' });
         const { rows, cols } = fullLines(g);
         if (rows.length || cols.length) continue;
         grid = g; placed++;
@@ -341,16 +461,17 @@
     }
     return emptyGrid();
   }
+
   // ---------- Reparto de piezas ----------
   const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
   const variantsOf = fams => fams.flatMap(f => f.shapes.map(s => ({ fam: f.id, color: f.color, ...parseShape(s) })));
-  const randomTray = () => [randomPiece(), randomPiece(), randomPiece()];
+  const randomHelper = () => { const v = variantsOf(HELPERS); return v[Math.floor(Math.random() * v.length)]; };
+  const randomTray = count => Array.from({ length: count }, randomPiece);
 
-  // Coloca la pieza y elimina las líneas que se completen (simulación del turno).
+  // Coloca la pieza y resuelve las líneas que se completen (simulación del turno).
   function applyMove(grid, p, r, c) {
     const g = withPiece(grid, p, r, c);
-    lineCells(fullLines(g)).forEach(k => { g[k] = null; });
-    return g;
+    return resolveClear(g, fullLines(g)).grid;
   }
   function spotsFor(grid, p) {
     const out = [];
@@ -373,10 +494,10 @@
   }
   // Construye la bandeja pieza a pieza sobre un tablero simulado: primero intenta
   // piezas normales y, si ninguna cabe, recurre a las de ayuda (de mayor a menor).
-  function buildFittingTray(grid) {
+  function buildFittingTray(grid, count) {
     let g = grid;
     const tray = [];
-    for (let s = 0; s < 3; s++) {
+    for (let s = 0; s < count; s++) {
       const candidates = [
         ...Array.from({ length: 12 }, randomPiece),
         ...shuffle(variantsOf(POOL)),
@@ -387,14 +508,15 @@
       if (!chosen) { tray.push(randomPiece()); continue; } // tablero lleno: no debería ocurrir
       // si algún hueco completa líneas, lo usa (ayuda a que la partida respire)
       const clearing = spots.filter(({ r, c }) => { const l = fullLines(withPiece(g, chosen, r, c)); return l.rows.length + l.cols.length > 0; });
-      const pick = (clearing.length ? clearing : spots)[Math.floor(Math.random() * (clearing.length || spots.length))];
+      const pool = clearing.length ? clearing : spots;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
       tray.push(chosen);
       g = applyMove(g, chosen, pick.r, pick.c);
     }
     return shuffle(tray);
   }
   // Margen de error de una bandeja: de todas las primeras jugadas posibles (pieza + hueco),
-  // qué fracción deja hueco para colocar las otras dos. 1 = imposible equivocarse.
+  // qué fracción deja hueco para colocar las demás. 1 = imposible equivocarse.
   function forgiveness(grid, tray) {
     let ok = 0, total = 0;
     for (let i = 0; i < tray.length; i++) {
@@ -406,31 +528,55 @@
     }
     return total ? ok / total : 0;
   }
-  const randomHelper = () => { const v = variantsOf(HELPERS); return v[Math.floor(Math.random() * v.length)]; };
-
-  // Bandeja con ayuda: busca 3 piezas que quepan todas y que además perdonen
+  // Bandeja con ayuda: busca piezas que quepan todas y que además perdonen
   // jugadas poco precisas. Empieza con piezas normales al azar y, si el tablero
   // está apretado, va metiendo piezas de ayuda (1, 2 o 3 casillas) hasta lograrlo.
-  function assistedTray(grid, minForgiveness) {
-    const ladder = [
-      [25, () => randomTray()],
-      [15, () => shuffle([randomPiece(), randomPiece(), randomHelper()])],
-      [15, () => shuffle([randomPiece(), randomHelper(), randomHelper()])],
-      [15, () => [randomHelper(), randomHelper(), randomHelper()]],
-    ];
-    for (const [tries, make] of ladder) {
-      for (let k = 0; k < tries; k++) {
-        const t = make();
+  function assistedTray(grid, minForgiveness, count) {
+    const tries = [25, 15, 15, 15];
+    for (let helpers = 0; helpers <= count; helpers++) {
+      for (let k = 0; k < (tries[helpers] || 15); k++) {
+        const t = shuffle([...randomTray(count - helpers), ...Array.from({ length: helpers }, randomHelper)]);
         if (canPlaceAll(grid, t, { n: 4000 }) && forgiveness(grid, t) >= minForgiveness) return t;
       }
     }
-    return buildFittingTray(grid);
+    return buildFittingTray(grid, count);
   }
+
+  // Giro de 90° en el sentido de las agujas del reloj (conserva las casillas especiales).
+  function rotatePiece(p) {
+    return { ...p, cells: p.cells.map(([y, x]) => [x, p.h - 1 - y]), w: p.h, h: p.w, kinds: p.kinds ? p.kinds.slice() : undefined };
+  }
+  function rotationsOf(p) {
+    const out = [];
+    let q = p;
+    for (let k = 0; k < 3; k++) { q = rotatePiece(q); out.push(q); }
+    return out;
+  }
+
+  // Reparte casillas especiales entre las piezas de la bandeja.
+  function decorate(pieces, round) {
+    const out = pieces.map(p => ({ ...p, kinds: p.cells.map(() => null) }));
+    if (round >= SPECIAL.bombFrom && Math.random() < SPECIAL.bombChance) {
+      const p = out[Math.floor(Math.random() * out.length)];
+      p.kinds[Math.floor(Math.random() * p.cells.length)] = 'bomb';
+    }
+    const big = out.filter(p => p.cells.length >= 4);
+    if (big.length && Math.random() < stoneChance(round)) {
+      const p = big[Math.floor(Math.random() * big.length)];
+      const free = shuffle(p.cells.map((_, j) => j).filter(j => !p.kinds[j]));
+      free.slice(0, p.cells.length >= 5 ? 2 : 1).forEach(j => { p.kinds[j] = 'stone'; });
+    }
+    return out;
+  }
+
   function dealTray() {
     state.round = (state.round || 0) + 1;
     state.assisted = Math.random() < assistChance(state.round);
     const early = state.round <= ASSIST.guaranteedRounds;
-    state.tray = state.assisted ? assistedTray(state.grid, early ? ASSIST.forgivenessEarly : ASSIST.forgiveness) : randomTray();
+    const tray = state.assisted
+      ? assistedTray(state.grid, early ? ASSIST.forgivenessEarly : ASSIST.forgiveness, 3)
+      : randomTray(3);
+    state.tray = decorate(tray, state.round);
   }
 
   // ---------- Estado ----------
@@ -438,20 +584,42 @@
   let best = 0;
   try { best = +localStorage.getItem('bloques-best') || 0; } catch (e) {}
 
+  const freshStats = () => ({ lines: 0, bestStreak: 0, pieces: 0, bombs: 0, cleans: 0 });
   function newGame() {
-    const grid = seedGrid();
-    state = { grid, tray: [], round: 0, assisted: false, score: 0, over: false, newRecord: false, bestAtStart: best };
+    state = {
+      grid: seedGrid(), tray: [], round: 0, assisted: false,
+      score: 0, over: false, stuck: false, newRecord: false, bestAtStart: best,
+      streak: 0, swaps: POWERS.startSwaps, rotates: POWERS.startRotates, stats: freshStats(),
+    };
     dealTray();
   }
 
+  // ¿Puede el jugador salir del atasco con una ayuda?
+  function canRescue() {
+    if (state.swaps > 0) return true;
+    if (state.rotates > 0) return state.tray.some(p => p && rotationsOf(p).some(q => fitsAnywhere(state.grid, q)));
+    return false;
+  }
+  function checkOver() {
+    const rem = state.tray.filter(Boolean);
+    const blocked = rem.length > 0 && rem.every(p => !fitsAnywhere(state.grid, p));
+    state.stuck = blocked && canRescue();
+    state.over = blocked && !state.stuck;
+  }
+
   // ---------- Vista ----------
-  const boardEl = document.getElementById('board');
-  const fxEl = document.getElementById('fx');
-  const trayEl = document.getElementById('tray');
+  const $ = id => document.getElementById(id);
+  const boardEl = $('board');
+  const fxEl = $('fx');
+  const trayEl = $('tray');
   const slots = [...trayEl.children];
-  const scoreEl = document.getElementById('score');
-  const bestEl = document.getElementById('best');
-  const overEl = document.getElementById('over');
+  const scoreEl = $('score');
+  const bestEl = $('best');
+  const overEl = $('over');
+  const streakEl = $('streak');
+  const streakN = $('streakN');
+  const swapBtn = $('swap');
+  const rotBtn = $('rotate');
   const cellsEl = [];
   for (let i = 0; i < N * N; i++) {
     const d = document.createElement('div');
@@ -459,23 +627,61 @@
     boardEl.append(d);
     cellsEl.push(d);
   }
+  // Sprites pixel art (12x12). Cada carácter es un píxel; '.' = transparente.
+  const PIXEL_COLORS = {
+    '#': '#1a1d2b', h: '#5d6480', w: '#e8eefb', c: '#3a3f55', f: '#c9a46a',
+    y: '#fff6c2', o: '#ffb938', r: '#ff6b5b',
+  };
+  const BOMB_SPRITE = [
+    '............',
+    '............',
+    '.......f....',
+    '......f.....',
+    '....cc......',
+    '..######....',
+    '.##hh####...',
+    '.#hw#####...',
+    '.#h######...',
+    '.########...',
+    '..######....',
+    '...####.....',
+  ];
+  // La mecha chisporrotea alternando dos fotogramas.
+  const SPARK_A = ['........y...', '.......owo..', '........o...'];
+  const SPARK_B = ['.......r.r..', '........y...', '.......r.r..'];
+  function spriteURL(rows) {
+    const h = 12, w = 12;
+    let rects = '';
+    rows.forEach((row, y) => [...row].forEach((ch, x) => {
+      if (PIXEL_COLORS[ch]) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${PIXEL_COLORS[ch]}"/>`;
+    }));
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+  const rootStyle = document.documentElement.style;
+  rootStyle.setProperty('--bomb-sprite', spriteURL(BOMB_SPRITE));
+  rootStyle.setProperty('--spark-a', spriteURL(SPARK_A));
+  rootStyle.setProperty('--spark-b', spriteURL(SPARK_B));
+
   const colorVar = name => `var(--b-${name})`;
+  const kindClass = k => k === 'bomb' ? ' bomb' : k === 'stone' ? ' stone' : '';
+  const cellClass = v => ' blk' + (v.k === 'bomb' ? ' bomb' : '') + (v.k === 'stone' ? (v.hp > 1 ? ' stone' : ' stone cracked') : '');
 
   function renderBoard(preview) {
-    const prevSet = new Map();
-    let clearSet = new Set();
+    const prev = new Set();
+    let hit = new Set();
     if (preview) {
-      preview.p.cells.forEach(([y, x]) => prevSet.set(idx(preview.r + y, preview.c + x), preview.p.color));
-      clearSet = lineCells(fullLines(withPiece(state.grid, preview.p, preview.r, preview.c)));
+      preview.p.cells.forEach(([y, x]) => prev.add(idx(preview.r + y, preview.c + x)));
+      const g = withPiece(state.grid, preview.p, preview.r, preview.c);
+      const res = resolveClear(g, fullLines(g));
+      hit = new Set([...res.removed, ...res.cracked]);
     }
     cellsEl.forEach((el, i) => {
       const v = state.grid[i];
-      const pv = prevSet.get(i);
-      let cls = 'cell';
-      let color = v || pv;
-      if (v) cls += ' blk';
-      else if (pv) cls += ' preview';
-      if (clearSet.has(i)) cls += ' will-clear';
+      let cls = 'cell', color = null;
+      if (v) { cls += cellClass(v); color = v.c; }
+      else if (prev.has(i)) { cls += ' preview'; color = preview.p.color; }
+      if (hit.has(i)) cls += ' will-clear';
       if (el.className !== cls) el.className = cls;
       if (color) el.style.setProperty('--c', colorVar(color)); else el.style.removeProperty('--c');
     });
@@ -485,10 +691,13 @@
     const el = document.createElement('div');
     el.className = cls;
     el.style.gridTemplateColumns = `repeat(${p.w}, auto)`;
-    const on = new Set(p.cells.map(([y, x]) => y * p.w + x));
+    const at = new Map(p.cells.map(([y, x], j) => [y * p.w + x, j]));
     for (let k = 0; k < p.w * p.h; k++) {
       const d = document.createElement('div');
-      if (on.has(k)) { d.className = 'blk'; d.style.setProperty('--c', colorVar(p.color)); }
+      if (at.has(k)) {
+        d.className = 'blk' + kindClass(p.kinds && p.kinds[at.get(k)]);
+        d.style.setProperty('--c', colorVar(p.color));
+      }
       el.append(d);
     }
     return el;
@@ -506,37 +715,62 @@
       if (!fitsAnywhere(state.grid, p)) slot.classList.add('nofit');
     });
     if (spawn) { void trayEl.offsetWidth; slots.forEach(s => s.classList.add('spawn')); }
-    // Indicador de la POC para ajustar la dificultad
-    const round = state.round || 1;
-    document.getElementById('meta').innerHTML =
-      `Ronda ${round} · ayuda ${Math.round(assistChance(round) * 100)} % · ` +
-      (state.assisted ? '<b>esta ronda con ayuda</b>' : 'esta ronda al azar');
   }
 
-  function renderScore(bump) {
+  const bump = el => { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); };
+  function renderScore(doBump) {
     scoreEl.textContent = state.score;
     bestEl.textContent = Math.max(best, state.score);
-    if (bump) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
+    if (doBump) bump(scoreEl);
+  }
+
+  let rotating = false;
+  let shownStreak = 0;
+  function renderPowers() {
+    $('swapN').textContent = state.swaps;
+    $('rotN').textContent = state.rotates;
+    swapBtn.disabled = !state.swaps || state.over;
+    rotBtn.disabled = !state.rotates || state.over;
+    rotBtn.setAttribute('aria-pressed', String(rotating));
+    swapBtn.classList.toggle('pulse', state.stuck && state.swaps > 0);
+    rotBtn.classList.toggle('pulse', state.stuck && state.rotates > 0 && !rotating);
+    trayEl.classList.toggle('rotating', rotating);
+    streakEl.classList.toggle('on', state.streak > 0);
+    streakN.textContent = 'x' + Math.min(state.streak, BONUS.maxStreak);
+    if (state.streak > shownStreak) bump(streakN);
+    shownStreak = state.streak;
+    $('stuck').hidden = !state.stuck;
   }
 
   function renderOver() {
     overEl.hidden = !state.over;
-    if (state.over) {
-      document.getElementById('final').textContent = state.score;
-      document.getElementById('record').hidden = !state.newRecord;
-    }
+    if (!state.over) return;
+    $('final').textContent = state.score;
+    $('record').hidden = !state.newRecord;
+    const s = state.stats;
+    const items = [
+      ['Líneas', s.lines], ['Mejor racha', 'x' + s.bestStreak], ['Rondas', state.round],
+      ['Piezas', s.pieces], ['Bombas', s.bombs], ['Tablero limpio', s.cleans],
+    ];
+    $('stats').replaceChildren(...items.map(([label, value]) => {
+      const d = document.createElement('div');
+      const dt = document.createElement('dt'); dt.textContent = label;
+      const dd = document.createElement('dd'); dd.textContent = value;
+      d.append(dt, dd);
+      return d;
+    }));
   }
 
-  function renderAll(spawn) { renderBoard(); renderTray(spawn); renderScore(); renderOver(); }
+  function renderAll(spawn) { renderBoard(); renderTray(spawn); renderScore(); renderPowers(); renderOver(); }
 
-  function floatText(html, x, y) {
+  function floatText(html, x, y, cls) {
     const f = document.createElement('div');
-    f.className = 'float';
+    f.className = 'float' + (cls ? ' ' + cls : '');
     f.innerHTML = html;
     f.style.left = x + '%';
     f.style.top = y + '%';
     fxEl.append(f);
-    setTimeout(() => f.remove(), 1000);
+    setTimeout(() => f.remove(), 1100);
   }
 
   // ---------- Sonido (sintetizado con Web Audio, sin archivos) ----------
@@ -554,6 +788,13 @@
     if (actx.state === 'suspended') actx.resume();
     return actx;
   }
+  function noiseBuffer(a, seconds, curve) {
+    const len = Math.floor(a.sampleRate * seconds);
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, curve);
+    return buf;
+  }
 
   // Golpe seco de bloque al encajar: tono grave que cae + chasquido corto.
   function sfxPlace() {
@@ -569,12 +810,8 @@
     o.connect(g).connect(a.destination);
     o.start(t); o.stop(t + 0.14);
 
-    const len = Math.floor(a.sampleRate * 0.03);
-    const buf = a.createBuffer(1, len, a.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
     const src = a.createBufferSource(), f = a.createBiquadFilter(), ng = a.createGain();
-    src.buffer = buf;
+    src.buffer = noiseBuffer(a, 0.03, 3);
     f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.8;
     ng.gain.value = 0.3;
     src.connect(f).connect(ng).connect(a.destination);
@@ -594,18 +831,132 @@
   }
 
   // Recompensa por línea: arpegio corto. Con varias líneas suena una vez por línea,
-  // cada repetición más aguda (escala pentatónica desde Do5).
-  const LINE_STEPS = [0, 4, 7, 12, 16, 19, 24, 28];
-  function sfxLines(n) {
+  // cada repetición más aguda (escala pentatónica desde Do5). La racha sube todo el tono.
+  const LINE_STEPS = [0, 4, 7, 12, 16, 19, 24, 28, 31];
+  function sfxLines(n, streak) {
     const a = audio(); if (!a) return;
     const start = a.currentTime + 0.08;
+    const offset = Math.min(Math.max(streak - 1, 0), 4);
     for (let k = 0; k < n; k++) {
-      const root = 523.25 * Math.pow(2, LINE_STEPS[Math.min(k, LINE_STEPS.length - 1)] / 12);
+      const step = LINE_STEPS[Math.min(k + offset, LINE_STEPS.length - 1)];
+      const root = 523.25 * Math.pow(2, step / 12);
       const t = start + k * 0.16;
       chime(a, root, t, 0.22);
       chime(a, root * 1.25, t + 0.045, 0.16);
       chime(a, root * 1.5, t + 0.09, 0.14);
     }
+  }
+
+  // Explosión de bomba: cuatro capas de ruido, sin tonos (un tono la haría sonar a tambor).
+  //  1) chasquido inicial brillante, 2) cuerpo de la explosión que se oscurece y se apaga,
+  //  3) retumbo grave de ruido marrón, 4) cascotes: chasquidos sueltos que caen después.
+  function sfxBoom(delay) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + (delay || 0);
+    const sr = a.sampleRate;
+    const out = a.createGain();
+    out.gain.value = 0.55;
+    // saturación suave para darle "suciedad"
+    const shaper = a.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(2.2 * x); }
+    shaper.curve = curve;
+    shaper.connect(out).connect(a.destination);
+
+    const play = (buffer, filter, gain, when) => {
+      const src = a.createBufferSource(), g = a.createGain();
+      src.buffer = buffer; g.gain.value = gain;
+      src.connect(filter).connect(g).connect(shaper);
+      src.start(when);
+    };
+
+    // 1) chasquido
+    const crack = a.createBiquadFilter();
+    crack.type = 'highpass'; crack.frequency.value = 1200;
+    play(noiseBuffer(a, 0.05, 2), crack, 0.6, t);
+
+    // 2) cuerpo: ruido áspero (con altibajos aleatorios) que pasa de brillante a apagado
+    const bodyLen = Math.floor(sr * 1.1);
+    const body = a.createBuffer(1, bodyLen, sr);
+    const bd = body.getChannelData(0);
+    let wob = 1;
+    for (let i = 0; i < bodyLen; i++) {
+      if (i % 220 === 0) wob = 0.55 + Math.random() * 0.45;
+      const p = i / bodyLen;
+      const env = Math.min(1, i / (sr * 0.008)) * Math.pow(1 - p, 2.4);
+      bd[i] = (Math.random() * 2 - 1) * env * wob;
+    }
+    const lp = a.createBiquadFilter();
+    lp.type = 'lowpass'; lp.Q.value = 0.7;
+    lp.frequency.setValueAtTime(5000, t);
+    lp.frequency.exponentialRampToValueAtTime(900, t + 0.18);
+    lp.frequency.exponentialRampToValueAtTime(180, t + 1.0);
+    play(body, lp, 0.75, t);
+
+    // 3) retumbo: ruido marrón muy grave y más largo
+    const rumLen = Math.floor(sr * 1.5);
+    const rum = a.createBuffer(1, rumLen, sr);
+    const rd = rum.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < rumLen; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+      const p = i / rumLen;
+      rd[i] = last * 3.5 * Math.min(1, i / (sr * 0.03)) * Math.pow(1 - p, 1.6);
+    }
+    const rumF = a.createBiquadFilter();
+    rumF.type = 'lowpass'; rumF.frequency.value = 220;
+    play(rum, rumF, 1.4, t + 0.01);
+
+    // 4) cascotes: chasquidos cortos repartidos al azar
+    const debLen = Math.floor(sr * 0.9);
+    const deb = a.createBuffer(1, debLen, sr);
+    const dd = deb.getChannelData(0);
+    for (let n = 0; n < 26; n++) {
+      const at = Math.floor(sr * (0.12 + Math.pow(Math.random(), 1.6) * 0.7));
+      const len = Math.floor(sr * (0.002 + Math.random() * 0.006));
+      const amp = (0.25 + Math.random() * 0.6) * (1 - at / debLen);
+      for (let i = 0; i < len && at + i < debLen; i++) dd[at + i] += (Math.random() * 2 - 1) * amp * (1 - i / len);
+    }
+    const debF = a.createBiquadFilter();
+    debF.type = 'bandpass'; debF.frequency.value = 2600; debF.Q.value = 0.9;
+    play(deb, debF, 0.5, t);
+  }
+
+  // Ayuda ganada: dos destellos agudos.
+  function sfxPower(delay) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + (delay || 0);
+    chime(a, 1568, t, 0.15);
+    chime(a, 2093, t + 0.08, 0.13);
+  }
+
+  // Cambiar piezas: barrido de aire que sube.
+  function sfxSwap() {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime;
+    const src = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = noiseBuffer(a, 0.28, 1);
+    bp.type = 'bandpass'; bp.Q.value = 1.5;
+    bp.frequency.setValueAtTime(400, t);
+    bp.frequency.exponentialRampToValueAtTime(3200, t + 0.25);
+    g.gain.value = 0.35;
+    src.connect(bp).connect(g).connect(a.destination);
+    src.start(t);
+  }
+
+  // Girar pieza: clic corto que sube.
+  function sfxRotate() {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(520, t);
+    o.frequency.exponentialRampToValueAtTime(880, t + 0.07);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + 0.1);
   }
 
   // Game Over: el clásico "wah wah wah waaah" de trombón triste.
@@ -644,14 +995,14 @@
     });
   }
 
-  // Empezar partida: arpegio mayor rápido que sube (Do-Mi-Sol-Do) y acaba en un acorde brillante.
-  function sfxStart() {
+  // Fanfarria positiva: arpegio mayor que sube (Do-Mi-Sol-Do) y acaba en un acorde brillante.
+  // Suena al empezar partida y en los bonus grandes (tablero limpio, línea de un color).
+  function sfxFanfare(delay) {
     const a = audio(); if (!a) return;
-    const t = a.currentTime + 0.02;
+    const t = a.currentTime + 0.02 + (delay || 0);
     [523.25, 659.25, 783.99].forEach((f, i) => chime(a, f, t + i * 0.07, 0.18));
     const end = t + 0.21;
     [1046.5, 1318.5, 1568].forEach(f => chime(a, f, end, 0.14));
-    // brillo extra: una nota aguda que sube al final
     const o = a.createOscillator(), g = a.createGain();
     o.type = 'square';
     o.frequency.setValueAtTime(1046.5, end);
@@ -663,7 +1014,7 @@
     o.start(end); o.stop(end + 0.26);
   }
 
-  const soundBtn = document.getElementById('sound');
+  const soundBtn = $('sound');
   function renderSound() {
     soundBtn.textContent = muted ? 'Sonido: no' : 'Sonido: sí';
     soundBtn.setAttribute('aria-pressed', String(!muted));
@@ -677,49 +1028,145 @@
   renderSound();
 
   // ---------- Jugada ----------
-  function place(i, r, c) {
-    const p = state.tray[i];
-    state.grid = withPiece(state.grid, p, r, c);
-    state.tray[i] = null;
-    state.score += p.cells.length;
-
-    const lines = fullLines(state.grid);
-    const n = lines.rows.length + lines.cols.length;
-    const clearing = lineCells(lines);
-    sfxPlace();
-    if (n) sfxLines(n);
-    if (n) {
-      const gain = LINE_POINTS * n * n; // 10 por línea × nº de líneas simultáneas
-      state.score += gain;
-      // centro aproximado de las líneas eliminadas, para el texto flotante
-      let sy = 0, sx = 0;
-      clearing.forEach(k => { sy += Math.floor(k / N); sx += k % N; });
-      const cy = (sy / clearing.size + .5) / N * 100, cx = (sx / clearing.size + .5) / N * 100;
-      const label = n === 1 ? '' : n === 2 ? '¡Doble!' : n === 3 ? '¡Triple!' : `¡Combo x${n}!`;
-      floatText(`+${gain}${label ? `<small>${label}</small>` : ''}`, Math.min(80, Math.max(20, cx)), Math.min(80, Math.max(20, cy)));
+  // Tras cualquier cambio: ¿atasco salvable, fin de partida o récord?
+  function afterChange(soundDelay) {
+    checkOver();
+    if (state.over) {
+      rotating = false;
+      sfxGameOver(soundDelay);
+      if (state.score > (state.bestAtStart || 0)) state.newRecord = true;
     }
-
-    // pinta la pieza colocada y anima las casillas que se eliminan
-    renderBoard();
-    if (n) {
-      clearing.forEach(k => cellsEl[k].classList.add('clearing'));
-      clearing.forEach(k => { state.grid[k] = null; });
-    }
-
-    const spawn = state.tray.every(t => t === null);
-    if (spawn) dealTray();
-    const remaining = state.tray.filter(Boolean);
-    state.over = remaining.every(t => !fitsAnywhere(state.grid, t));
-    if (state.over) sfxGameOver(n ? 0.25 + n * 0.16 + 0.3 : 0.35); // espera a que acaben los otros sonidos
-    if (state.over && state.score > (state.bestAtStart || 0)) state.newRecord = true;
     if (state.score > best) {
       best = state.score;
       try { localStorage.setItem('bloques-best', best); } catch (e) {}
     }
+  }
+
+  function earn(kind) {
+    if (state[kind] >= POWERS.max) return null;
+    state[kind]++;
+    return kind === 'swaps' ? '+1 Cambiar' : '+1 Girar';
+  }
+
+  function place(i, r, c) {
+    const p = state.tray[i];
+    const placed = withPiece(state.grid, p, r, c);
+    state.tray[i] = null;
+    state.stats.pieces++;
+    state.score += p.cells.length;
+
+    const lines = fullLines(placed);
+    const n = lines.rows.length + lines.cols.length;
+    const res = resolveClear(placed, lines);
+    let tail = 0.35; // cuándo terminan los sonidos encadenados (para el game over)
+    sfxPlace();
+
+    if (n) {
+      state.streak++;
+      const mult = Math.min(state.streak, BONUS.maxStreak);
+      const prevLines = state.stats.lines;
+      state.stats.lines += n;
+      state.stats.bestStreak = Math.max(state.stats.bestStreak, state.streak);
+
+      // 10 por línea × nº de líneas simultáneas × racha
+      const lineGain = LINE_POINTS * n * n * mult;
+      state.score += lineGain;
+      sfxLines(n, state.streak);
+      tail = 0.08 + n * 0.16 + 0.35;
+
+      // texto flotante en el centro aproximado de las líneas eliminadas
+      const lc = lineCells(lines);
+      let sy = 0, sx = 0;
+      lc.forEach(k => { sy += Math.floor(k / N); sx += k % N; });
+      const cy = (sy / lc.size + .5) / N * 100, cx = (sx / lc.size + .5) / N * 100;
+      const tags = [n === 2 ? '¡Doble!' : n === 3 ? '¡Triple!' : n >= 4 ? `¡${n} líneas!` : '', mult > 1 ? `Racha x${mult}` : ''].filter(Boolean).join(' · ');
+      floatText(`+${lineGain}${tags ? `<small>${tags}</small>` : ''}`, Math.min(80, Math.max(20, cx)), Math.min(80, Math.max(20, cy)));
+
+      const extra = [];
+      if (res.bombs) {
+        const pts = res.boom.size * BONUS.perBombCell;
+        state.score += pts;
+        state.stats.bombs += res.bombs;
+        extra.push(`¡BUM! +${pts}`);
+        sfxBoom(0.1);
+      }
+      let fanfare = false;
+      if (res.mono) {
+        const pts = res.mono * BONUS.monoLine;
+        state.score += pts;
+        extra.push(`Línea de color +${pts}`);
+        fanfare = true;
+      }
+      const clean = res.grid.every(v => v === null);
+      if (clean) {
+        state.score += BONUS.cleanBoard;
+        state.stats.cleans++;
+        extra.push(`¡Tablero limpio! +${BONUS.cleanBoard}`);
+        fanfare = true;
+      }
+      if (fanfare) { sfxFanfare(tail - 0.2); tail += 0.5; }
+
+      // ayudas ganadas
+      const earned = [];
+      if (state.streak % POWERS.swapEveryStreak === 0) earned.push(earn('swaps'));
+      if (clean) earned.push(earn('swaps'));
+      if (Math.floor(state.stats.lines / POWERS.rotateEveryLines) > Math.floor(prevLines / POWERS.rotateEveryLines)) earned.push(earn('rotates'));
+      const got = earned.filter(Boolean);
+      if (got.length) { extra.push(...new Set(got)); sfxPower(tail - 0.2); tail += 0.3; }
+
+      extra.forEach((t, k) => setTimeout(() => floatText(t, 50, 38 + k * 13, 'extra'), 350 + k * 260));
+    } else {
+      state.streak = 0;
+    }
+
+    // pinta la pieza colocada y anima lo que se elimina o se agrieta
+    state.grid = placed;
+    renderBoard();
+    res.removed.forEach(k => cellsEl[k].classList.add(res.boom.has(k) ? 'boom' : 'clearing'));
+    res.cracked.forEach(k => cellsEl[k].classList.add('crack-hit'));
+    state.grid = res.grid;
+
+    const spawn = state.tray.every(t => t === null);
+    if (spawn) dealTray();
+    afterChange(tail);
     renderScore(true);
     renderTray(spawn);
-    setTimeout(() => { renderBoard(); renderOver(); }, n ? 330 : 0);
+    renderPowers();
+    setTimeout(() => { renderBoard(); renderOver(); }, n ? 430 : 0);
   }
+
+  // ---------- Ayudas ----------
+  function useSwap() {
+    if (!state.swaps || state.over || drag) return;
+    audio();
+    state.swaps--;
+    rotating = false;
+    const open = state.tray.map((p, i) => p ? i : -1).filter(i => i >= 0);
+    const fresh = decorate(assistedTray(state.grid, ASSIST.forgiveness, open.length), state.round);
+    open.forEach((i, k) => { state.tray[i] = fresh[k]; });
+    sfxSwap();
+    afterChange(0.3);
+    renderTray(true);
+    renderPowers();
+    renderOver();
+  }
+  function toggleRotate(on) {
+    rotating = on && state.rotates > 0 && !state.over;
+    renderPowers();
+  }
+  function rotateSlot(i) {
+    state.tray[i] = rotatePiece(state.tray[i]);
+    state.rotates--;
+    rotating = false;
+    sfxRotate();
+    afterChange(0.2);
+    renderTray();
+    renderPowers();
+    renderOver();
+  }
+  swapBtn.addEventListener('click', useSwap);
+  rotBtn.addEventListener('click', () => { audio(); toggleRotate(!rotating); });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && rotating) toggleRotate(false); });
 
   // ---------- Arrastrar y soltar ----------
   let drag = null;
@@ -732,6 +1179,7 @@
     if (!p) return;
     e.preventDefault();
     audio(); // desbloquea el audio con el primer gesto del jugador
+    if (rotating) { rotateSlot(i); return; }
     const a = cellsEl[0].getBoundingClientRect();
     const b = cellsEl[1].getBoundingClientRect();
     const size = a.width, pitch = b.left - a.left, gap = pitch - size;
@@ -781,23 +1229,32 @@
 
   function restart() {
     if (drag) { drag.ghost.remove(); drag = null; }
+    rotating = false;
+    shownStreak = 0;
     fxEl.replaceChildren();
-    sfxStart();
+    sfxFanfare();
     newGame();
     renderAll(true);
   }
-  document.getElementById('restart').addEventListener('click', restart);
-  document.getElementById('again').addEventListener('click', restart);
+  $('restart').addEventListener('click', restart);
+  $('again').addEventListener('click', restart);
 
   // ---------- Arranque (conserva la partida si la página se actualiza) ----------
+  // Adapta partidas guardadas por versiones anteriores (casillas como texto, sin ayudas ni estadísticas).
+  function normalize(s) {
+    s.grid = s.grid.map(v => v == null ? null : typeof v === 'string' ? { c: v } : v);
+    s.tray = (s.tray || []).map(p => p && { ...p, kinds: p.kinds || p.cells.map(() => null) });
+    if (s.streak == null) s.streak = 0;
+    if (s.swaps == null) s.swaps = POWERS.startSwaps;
+    if (s.rotates == null) s.rotates = POWERS.startRotates;
+    if (!s.stats) s.stats = freshStats();
+    return s;
+  }
   function start(data) {
-    if (data && data.state && data.state.grid) state = data.state; else newGame();
+    if (data && data.state && data.state.grid) state = normalize(data.state); else newGame();
     renderAll(true);
   }
   if (typeof window.claude?.hot?.snapshot === 'function') window.claude.hot.snapshot(() => ({ state }));
   window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
-
-  // Hook de depuración para pruebas
-  window.__bloques = { get state() { return state; }, place, canPlace, fitsAnywhere, FAMILIES };
 })();
 </script>

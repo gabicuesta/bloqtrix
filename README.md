@@ -45,6 +45,16 @@ mouse and touch (on touch, the piece floats above your finger so you can see whe
 
 Open `index.html` in any modern browser. That's it.
 
+## ZX Spectrum version
+
+BLOQTRIX also runs on a **ZX Spectrum**, in two builds:
+- **48K:** beeper sound.
+- **128K:** sound effects and music on the AY chip.
+
+It has the same rules as the web version, played with QAOP or the cursor keys, number keys and a Kempston
+joystick. The fair dealer also runs on the 3.5 MHz Z80, thanks to bitboard rows and a hand-written assembly fit
+check. Ready-to-load `.tap` and `.sna` files are in [`zx/build`](zx/build); details are in [`zx/README.md`](zx/README.md).
+
 ## How it was made
 
 Designed and iterated with **Claude Code**: game rules, the fair-dealing solver, the synthesised sound effects and
@@ -68,5 +78,12 @@ eliminarlas y encadena combos. Es un único archivo HTML, sin dependencias. **[J
   total las tres primeras rondas y luego va bajando del 80 % al 20 %.
 - **Sonido sintetizado** con Web Audio, sin archivos: golpe al encajar, arpegio por línea y trombón triste al perder.
 - Funciona con ratón y pantalla táctil, y respeta la preferencia de reducir animaciones.
+
+**También para ZX Spectrum.** Hay dos versiones, ambas con las mismas reglas:
+- **48K:** sonido por el *beeper*.
+- **128K:** efectos y música con el chip AY.
+
+Los archivos `.tap` y `.sna` listos para cargar están en [`zx/build`](zx/build), y todos los detalles en
+[`zx/README.md`](zx/README.md).
 
 Hecho con **Claude Code**, de la idea al juego terminado en pocas sesiones.

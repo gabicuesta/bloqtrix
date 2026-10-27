@@ -1,0 +1,52 @@
+BLOQTRIX v1.0
+An 8x8 block puzzle for the ZX Spectrum 48K / 128K
+(c) 2026 Gabriel Cuesta. MIT licence.
+https://github.com/gabicuesta/bloqtrix
+
+FILES
+  bloqtrix48.tap / .sna    Spectrum 48K and later. Beeper sound.
+  bloqtrix128.tap / .sna   Spectrum 128K and +2. AY sound effects and music.
+                           (Should work on +2A/+3, but untested.)
+
+  The .sna snapshots load instantly in an emulator. The .tap files work in
+  emulators and on real hardware: LOAD "" on a 48K, Tape Loader on a 128K.
+
+HOW TO PLAY
+  Each round deals 3 pieces. Place them on the 8x8 board and complete rows
+  or columns to clear them. The game ends when no piece fits and you have
+  no powers left that could fix it.
+
+CONTROLS
+  Q A O P or cursor keys (5 6 7 8)  Move the piece
+  1 2 3  or  N                      Pick a piece (N cycles to the next one)
+  SPACE, ENTER or 0                 Place
+  C                                 Swap: new pieces that fit
+  G                                 Rotate the selected piece 90 degrees
+  S                                 Sound on/off
+  M                                 Music on/off (128K)
+  L (on the title screen)           Language: Spanish / English
+  Kempston                          Move, and press fire to place. Hold fire
+                                    and push left or right to change piece.
+
+SCORING
+  1 point per placed cell.
+  Line clears: 10 x lines x lines x streak (double +40, triple +90...).
+  STREAK: clear lines on consecutive placements and the multiplier goes up
+          to x8. Place a piece without clearing a line and it resets to 0.
+  +100 for every line made of a single colour.
+  +300 for clearing the whole board.
+
+POWERS
+  You start with 1 Swap and 1 Rotate (up to 3 of each).
+  Earn a Swap each time your streak reaches 3, 6, 9... and when you clear
+  the board. Earn a Rotate every 8 lines.
+
+SPECIAL CELLS
+  BOMB (from round 2): when its line is cleared it wipes out its 3x3 area,
+        and sets off any other bomb it reaches. +2 per cell.
+  STONE (from round 5): the first line only cracks it; the second one
+        breaks it.
+
+FAIR DEALING
+  The first three rounds always deal pieces that fit. After that the game
+  helps you 80 % of the time, and the help slowly drops to 20 %.

@@ -20,6 +20,7 @@ enum { Z_BLACK, Z_BLUE, Z_RED, Z_MAGENTA, Z_GREEN, Z_CYAN, Z_YELLOW, Z_WHITE };
 #define CH_N_TILDE "\205"
 #define CH_EXCL    "\206"   // ¡
 #define CH_QUEST   "\207"   // ¿
+#define CH_COPY    "\210"   // ©
 
 extern uint8_t bmp_block[32], bmp_empty[32], bmp_ghost[32], bmp_stone[32], bmp_cracked[32];
 extern uint8_t bmp_bomb[2][32];

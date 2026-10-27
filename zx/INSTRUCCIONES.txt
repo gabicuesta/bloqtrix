@@ -1,0 +1,54 @@
+BLOQTRIX v1.0
+Un puzle de bloques 8x8 para ZX Spectrum 48K / 128K
+(c) 2026 Gabriel Cuesta. Licencia MIT.
+https://github.com/gabicuesta/bloqtrix
+
+ARCHIVOS
+  bloqtrix48.tap / .sna    Spectrum 48K y superiores. Sonido por el beeper.
+  bloqtrix128.tap / .sna   Spectrum 128K y +2. Efectos y musica con el chip AY.
+                           (En +2A/+3 deberia funcionar, pero no se ha probado.)
+
+  Los .sna cargan al momento en un emulador. Los .tap sirven para emulador
+  o Spectrum real: en el 48K, LOAD "" ; en el 128K, la opcion Tape Loader.
+
+COMO SE JUEGA
+  Cada ronda trae 3 piezas. Colocalas en el tablero de 8x8 y completa filas
+  o columnas para eliminarlas. La partida acaba cuando ninguna pieza cabe y
+  no te quedan ayudas que lo arreglen.
+
+CONTROLES
+  Q A O P o cursores (5 6 7 8)  Mover la pieza
+  1 2 3  o  N                   Elegir pieza (N pasa a la siguiente)
+  ESPACIO, ENTER o 0            Colocar
+  C                             Cambiar: piezas nuevas que caben
+  G                             Girar 90 grados la pieza elegida
+  S                             Sonido si/no
+  M                             Musica si/no (128K)
+  L (en el titulo)              Idioma: espanol / ingles
+  Kempston                      Mover y colocar con el disparo. Para cambiar
+                                de pieza, manten el disparo y mueve a
+                                izquierda o derecha.
+
+PUNTOS
+  1 punto por casilla colocada.
+  Al hacer lineas: 10 x lineas x lineas x racha (doble +40, triple +90...).
+  RACHA: si haces linea en jugadas seguidas, el multiplicador sube hasta x8.
+         Si colocas una pieza sin hacer linea, vuelve a 0.
+  +100 por cada linea entera de un solo color.
+  +300 por dejar el tablero vacio.
+
+AYUDAS
+  Empiezas con 1 Cambiar y 1 Girar (maximo 3 de cada).
+  Ganas un Cambiar cada vez que la racha llega a 3, 6, 9... y al dejar el
+  tablero vacio. Ganas un Girar cada 8 lineas.
+
+CASILLAS ESPECIALES
+  BOMBA (desde la ronda 2): al eliminarse su linea arrasa su zona de 3x3.
+         Si alcanza a otra bomba, explota en cadena. +2 por casilla.
+  PIEDRA (desde la ronda 5): la primera linea solo la agrieta; la segunda
+         la rompe.
+
+REPARTO JUSTO
+  Las tres primeras rondas siempre traen piezas que caben. Despues, el juego
+  te echa una mano un 80 % de las veces, y esa ayuda baja poco a poco hasta
+  el 20 %.

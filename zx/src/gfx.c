@@ -25,8 +25,8 @@ const uint8_t color_ink_attr[] = {
   INK(Z_CYAN), INK(Z_GREEN), A_BRIGHT | INK(Z_WHITE), INK(Z_WHITE), INK(Z_WHITE),
 };
 
-// Fuente: la del ROM en negrita (cada fila OR consigo misma desplazada) + 8 letras propias.
-static uint8_t font[(96 + 8) * 8];
+// Fuente: la del ROM en negrita (cada fila OR consigo misma desplazada) + 9 caracteres propios.
+static uint8_t font[(96 + 9) * 8];
 
 uint8_t bmp_block[32], bmp_empty[32], bmp_ghost[32], bmp_stone[32], bmp_cracked[32];
 uint8_t bmp_bomb[2][32];
@@ -105,6 +105,11 @@ static void make_font(void) {
       for (x = 0; x < 8; ++x) if (v & (1 << x)) m |= 0x80 >> x;
       font[(96 + 7) * 8 + j] = m;
     }
+  }
+  // ©
+  {
+    static const uint8_t copy[8] = { 0x3C, 0x42, 0x99, 0xA1, 0xA1, 0x99, 0x42, 0x3C };
+    memcpy(font + (96 + 8) * 8, copy, 8);
   }
 }
 
@@ -208,7 +213,7 @@ void attr16(uint8_t row, uint8_t col, uint8_t a) {
 }
 
 static const uint8_t *glyph(uint8_t ch) {
-  if (ch >= 128 && ch < 136) return font + (96 + ch - 128) * 8;
+  if (ch >= 128 && ch < 137) return font + (96 + ch - 128) * 8;
   if (ch < 32 || ch > 127) ch = '?';
   return font + (ch - 32) * 8;
 }

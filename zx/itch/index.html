@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLOQTRIX · ZX Spectrum</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; background: #000; color: #cdcdcd; font: 14px/1.4 "Courier New", monospace; }
+  main { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 8px; }
+  #emu { max-width: 100%; overflow-x: auto; }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: center; max-width: 620px; }
+  .keys b { color: #ffff00; font-weight: normal; }
+  .model { display: flex; gap: 8px; }
+  .model a { color: #00ffff; text-decoration: none; border: 1px solid #0000cd; padding: 2px 10px; }
+  .model a[aria-current="true"] { background: #0000cd; color: #fff; }
+  .note { color: #8a8a8a; font-size: 12px; text-align: center; max-width: 620px; }
+</style>
+</head>
+<body>
+<main>
+  <div id="emu"></div>
+  <div class="model" id="model">
+    <a href="?128" data-m="128">128K · AY music</a>
+    <a href="?48" data-m="48">48K · beeper</a>
+  </div>
+  <div class="keys">
+    <span><b>QAOP</b>/<b>cursors</b> move</span>
+    <span><b>1 2 3</b>/<b>N</b> pick</span>
+    <span><b>SPACE</b> place</span>
+    <span><b>C</b> swap</span>
+    <span><b>G</b> rotate</span>
+    <span><b>S</b> sound</span>
+    <span><b>M</b> music</span>
+    <span><b>L</b> language (title)</span>
+  </div>
+  <p class="note">Click the screen to start (browsers need a click before playing sound).
+    Emulator: <a href="https://github.com/gasman/jsspeccy3" style="color:#8a8a8a">JSSpeccy 3</a> by Matt Westcott (GPL-3.0).</p>
+</main>
+<script src="jsspeccy/jsspeccy.js"></script>
+<script>
+  const model = location.search.includes('48') ? 48 : 128;
+  document.querySelectorAll('#model a').forEach(a => a.setAttribute('aria-current', String(+a.dataset.m === model)));
+  JSSpeccy(document.getElementById('emu'), {
+    machine: model,
+    openUrl: model === 48 ? 'bloqtrix48.sna' : 'bloqtrix128.sna',
+    zoom: 2,
+    sandbox: true,
+    autoStart: false,
+  });
+</script>
+</body>
+</html>

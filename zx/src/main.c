@@ -9,6 +9,7 @@
 #include "engine.h"
 #include "gfx.h"
 #include "sound.h"
+#include "lang.h"
 
 #define BR 4          // fila (en bloques de 8x8) donde empieza el tablero
 #define BC 1          // columna donde empieza el tablero
@@ -16,11 +17,14 @@
 #define MAX_POWER 3
 #define MAX_STREAK 8
 
+#define VERSION "V1.0"
 #ifdef MODEL128
 #define MODEL_NAME "128K AY"
 #else
 #define MODEL_NAME "48K"
 #endif
+
+uint8_t lang;   // 0 = español, 1 = inglés (tecla L en el título)
 
 // Atributos de texto
 #define T_LABEL (A_BRIGHT | INK(Z_CYAN))
@@ -61,6 +65,7 @@ static void wait_frames(uint8_t n) { while (n--) intrinsic_halt(); }
 #define K2_3 0x04
 #define K2_S 0x08
 #define K2_M 0x10
+#define K2_L 0x20
 
 static uint8_t keys, keys_prev, keys2, keys2_prev, joy, joy_prev, kempston, kempston_checked;
 #define PRESSED(m)  ((keys & (m)) && !(keys_prev & (m)))
@@ -84,6 +89,7 @@ static void read_input(void) {
   r = ~z80_inp(0x7FFE); if (r & 0x01) keys |= K_FIRE; if (r & 0x08) keys |= K_NEXT;    // ESPACIO N
                         if (r & 0x04) keys2 |= K2_M;                                   // M
   r = ~z80_inp(0xBFFE); if (r & 0x01) keys |= K_FIRE;                                  // ENTER
+                        if (r & 0x02) keys2 |= K2_L;                                   // L
   r = ~z80_inp(0xFEFE); if (r & 0x08) keys |= K_SWAP;                                  // C
   // Kempston: bit 0 derecha, 1 izquierda, 2 abajo, 3 arriba, 4 disparo
   if (kempston) {
@@ -129,6 +135,7 @@ static void print_right(uint8_t row, uint8_t col_end, const char *s, uint8_t a) 
 }
 static char sbuf[24];
 static char *cat(char *d, const char *s) { while (*s) *d++ = *s++; *d = 0; return d; }
+static void print_center(uint8_t row, const char *s, uint8_t a) { print_at(row, (32 - text_len(s)) >> 1, s, a); }
 
 // ---------- Estado de la partida ----------
 static Piece tray[3], spare[3];
@@ -144,7 +151,7 @@ static uint8_t spark;
 static uint8_t gmask[N], fmask[N], gvalid, ghost_color;
 
 // mensajes bajo el tablero
-static char msg2q[4][20];
+static char msg2q[4][24];
 static uint8_t msg2n, msg2i, msg1_timer, msg2_timer;
 
 // ---------- Dibujo del tablero ----------
@@ -210,11 +217,13 @@ static void draw_powers(void) {
   uint8_t a;
   a = (stuck && swaps) ? (A_FLASH | T_KEY) : T_KEY;
   print_at(9, PANEL, "C", a);
-  print_at(9, PANEL + 2, "CAMBIAR", swaps ? T_VALUE : T_DIM);
+  clear_area(9, PANEL + 2, 9, 1, 0);
+  print_at(9, PANEL + 2, TX(S_SWAP), swaps ? T_VALUE : T_DIM);
   print_at(9, 31, u32str(swaps), swaps ? T_GOLD : T_DIM);
   a = (stuck && rotates) ? (A_FLASH | T_KEY) : T_KEY;
   print_at(10, PANEL, "G", a);
-  print_at(10, PANEL + 2, "GIRAR", rotates ? T_VALUE : T_DIM);
+  clear_area(10, PANEL + 2, 9, 1, 0);
+  print_at(10, PANEL + 2, TX(S_ROTATE), rotates ? T_VALUE : T_DIM);
   print_at(10, 31, u32str(rotates), rotates ? T_GOLD : T_DIM);
 }
 
@@ -222,15 +231,15 @@ static void draw_powers(void) {
 static void draw_music(void) {
 #ifdef MODEL128
   print_at(11, PANEL, "M", T_KEY);
-  print_at(11, PANEL + 2, "M" CH_U_ACUTE "SICA", music_on ? T_VALUE : T_DIM);
-  print_at(11, 29, music_on ? "S" CH_I_ACUTE " " : "NO", music_on ? T_GOLD : T_DIM);
+  print_at(11, PANEL + 2, TX(S_MUSIC), music_on ? T_VALUE : T_DIM);
+  print_at(11, 29, music_on ? TX(S_ON) : TX(S_OFF), music_on ? T_GOLD : T_DIM);
 #endif
 }
 
 static void draw_streak(void) {
   uint8_t m = streak > MAX_STREAK ? MAX_STREAK : streak;
   sbuf[0] = 'x'; sbuf[1] = '0' + m; sbuf[2] = 0;
-  print_at(7, PANEL, "RACHA", T_LABEL);
+  print_at(7, PANEL, TX(S_STREAK), T_LABEL);
   print_tall(6, 29, sbuf, streak ? (A_BRIGHT | INK(Z_RED)) : T_DIM);
 }
 
@@ -274,7 +283,7 @@ static void msg2_push(const char *s) {
 }
 static void draw_stuck(void) {
   clear_area(22, 0, 18, 1, 0);
-  if (stuck) print_at(22, 0, "SIN HUECO: C O G", A_FLASH | T_GOLD);
+  if (stuck) print_at(22, 0, TX(S_STUCK), A_FLASH | T_GOLD);
 }
 static void tick_messages(void) {
   if (msg1_timer && !--msg1_timer) clear_area(21, 0, 18, 1, 0);
@@ -329,7 +338,7 @@ static void check_over(void) {
 static void deal_round(void) {
   uint8_t assisted;
   clear_area(22, 0, 18, 1, 0);
-  print_at(22, 0, "REPARTIENDO...", T_DIM);
+  print_at(22, 0, TX(S_DEALING), T_DIM);
   ++round_no;
   assisted = rnd_below(100) < assist_chance(round_no);
   deal_pieces(tray, 3, round_no, assisted);
@@ -356,9 +365,9 @@ static void draw_game_screen(void) {
   print_tall(0, BC + 4, "TRIX", T_GOLD);
   print_at(1, BC + 10, MODEL_NAME, T_DIM);
   draw_frame(BR, BC, 16, 16, A_BRIGHT | INK(Z_BLUE));
-  print_at(0, PANEL, "PUNTOS", T_LABEL);
-  print_at(4, PANEL, "R" CH_E_ACUTE "CORD", T_LABEL);
-  print_at(23, 0, "QAOP/CURSORES 1-3 ESPACIO C G S", T_DIM);
+  print_at(0, PANEL, TX(S_SCORE), T_LABEL);
+  print_at(4, PANEL, TX(S_BEST), T_LABEL);
+  print_at(23, 0, TX(S_HINT), T_DIM);
   draw_score(); draw_streak(); draw_powers(); draw_music(); draw_tray();
   draw_board();
   update_ghost();
@@ -423,30 +432,30 @@ static void do_place(void) {
     gain = (uint32_t)10 * n * n * mult;
     score += gain;
     d = cat(sbuf, "+"); d = cat(d, u32str(gain));
-    if (n == 2) d = cat(d, " DOBLE");
-    else if (n == 3) d = cat(d, " TRIPLE");
-    else if (n >= 4) { d = cat(d, " "); d = cat(d, u32str(n)); d = cat(d, " L" CH_I_ACUTE "NEAS"); }
+    if (n == 2) d = cat(d, TX(S_DOUBLE));
+    else if (n == 3) d = cat(d, TX(S_TRIPLE));
+    else if (n >= 4) { d = cat(d, " "); d = cat(d, u32str(n)); d = cat(d, TX(S_LINES_SUFFIX)); }
     if (mult > 1) { d = cat(d, " x"); d = cat(d, u32str(mult)); }
     msg1(sbuf, A_BRIGHT | INK(Z_WHITE));
 
     if (clr.bombs) {
       gain = (uint32_t)clr.boomcells * 2; score += gain; st_bombs += clr.bombs;
-      d = cat(sbuf, CH_EXCL "BUM! +"); cat(d, u32str(gain)); msg2_push(sbuf);
+      d = cat(sbuf, TX(S_BOOM)); cat(d, u32str(gain)); msg2_push(sbuf);
     }
     if (clr.mono) {
       gain = (uint32_t)clr.mono * 100; score += gain;
-      d = cat(sbuf, "L" CH_I_ACUTE "NEA DE COLOR +"); cat(d, u32str(gain)); msg2_push(sbuf);
+      d = cat(sbuf, TX(S_COLOUR)); cat(d, u32str(gain)); msg2_push(sbuf);
       fan = 1;
     }
     if (clr.clean) {
       score += 300; ++st_cleans;
-      msg2_push(CH_EXCL "TABLERO LIMPIO! +300");
+      msg2_push(TX(S_CLEAN));
       fan = 1;
     }
     if (fan) snd_fanfare();
-    if (streak % 3 == 0 && swaps < MAX_POWER) { ++swaps; msg2_push("+1 CAMBIAR"); earned = 1; }
+    if (streak % 3 == 0 && swaps < MAX_POWER) { ++swaps; msg2_push(TX(S_PLUS_SWAP)); earned = 1; }
     if (clr.clean && swaps < MAX_POWER) { ++swaps; earned = 1; }
-    if (st_lines / 8 > prev / 8 && rotates < MAX_POWER) { ++rotates; msg2_push("+1 GIRAR"); earned = 1; }
+    if (st_lines / 8 > prev / 8 && rotates < MAX_POWER) { ++rotates; msg2_push(TX(S_PLUS_ROT)); earned = 1; }
     if (earned) snd_power();
   } else {
     streak = 0;
@@ -494,48 +503,55 @@ static void game_over_screen(void) {
   if (score > best) best = score;
   clear_area(BR, BC, 16, 16, 0);
   draw_frame(BR, BC, 16, 16, A_BRIGHT | INK(Z_RED));
-  print_tall(BR + 2, BC + 3, "SIN HUECO", T_BAD);
-  print_at(BR + 4, BC + 1, "PUNTOS", T_LABEL);
+  print_tall(BR + 2, BC + 3, TX(S_NOROOM), T_BAD);
+  print_at(BR + 4, BC + 1, TX(S_SCORE), T_LABEL);
   print_right(BR + 4, BC + 14, u32str(score), T_GOLD);
-  if (newrec) print_at(BR + 5, BC + 1, CH_EXCL "NUEVO R" CH_E_ACUTE "CORD!", A_FLASH | T_GOOD);
-  stat_line(BR + 7, "L" CH_I_ACUTE "NEAS", st_lines, 0);
-  stat_line(BR + 8, "MEJOR RACHA", st_beststreak, "x");
-  stat_line(BR + 9, "RONDAS", round_no, 0);
-  stat_line(BR + 10, "PIEZAS", st_pieces, 0);
-  stat_line(BR + 11, "BOMBAS", st_bombs, 0);
-  stat_line(BR + 12, "LIMPIOS", st_cleans, 0);
-  print_at(BR + 14, BC + 1, "ESPACIO: OTRA", A_FLASH | T_GOLD);
+  if (newrec) print_at(BR + 5, BC + 1, TX(S_NEWBEST), A_FLASH | T_GOOD);
+  stat_line(BR + 7, TX(S_ST_LINES), st_lines, 0);
+  stat_line(BR + 8, TX(S_ST_STREAK), st_beststreak, "x");
+  stat_line(BR + 9, TX(S_ST_ROUNDS), round_no, 0);
+  stat_line(BR + 10, TX(S_ST_PIECES), st_pieces, 0);
+  stat_line(BR + 11, TX(S_ST_BOMBS), st_bombs, 0);
+  stat_line(BR + 12, TX(S_ST_CLEAN), st_cleans, 0);
+  print_at(BR + 14, BC + 1, TX(S_AGAIN), A_FLASH | T_GOLD);
   draw_score();
   snd_gameover();
   wait_fire_release();
 }
 
 // ---------- Título ----------
-static void title_screen(void) {
+static void draw_title(void) {
   static const uint8_t deco[] = { C_YELLOW, C_CYAN, C_RED, C_GREEN, C_MAGENTA, C_BLUE, C_ORANGE, C_PINK, C_LIME, C_TEAL, C_WHITE, C_YELLOW };
-  uint8_t i, t = 0;
+  uint8_t i;
   gfx_cls();
+  print_center(0, CH_COPY " 2026 GABRIEL CUESTA", T_DIM);
   print_huge(2, 8, "BLOQ", T_VALUE);
   print_huge(2, 16, "TRIX", T_GOLD);
   for (i = 0; i < 12; ++i) draw16(5, 4 + i * 2, (i == 5) ? bmp_bomb[0] : (i == 9 ? bmp_stone : bmp_block), color_paper_attr[deco[i]]);
-  print_at(8, 4, "UN PUZLE DE BLOQUES 8X8", T_LABEL);
-  print_at(10, 1, "QAOP / CURSORES", T_GOLD);   print_at(10, 20, "MOVER", T_VALUE);
-  print_at(11, 1, "1 2 3 / N", T_GOLD);         print_at(11, 20, "ELEGIR PIEZA", T_VALUE);
-  print_at(12, 1, "ESPACIO / 0", T_GOLD); print_at(12, 20, "COLOCAR", T_VALUE);
-  print_at(13, 1, "C", T_GOLD);                 print_at(13, 20, "CAMBIAR", T_VALUE);
-  print_at(14, 1, "G", T_GOLD);                 print_at(14, 20, "GIRAR", T_VALUE);
-  print_at(15, 1, "S", T_GOLD);                 print_at(15, 20, "SONIDO", T_VALUE);
+  print_center(8, TX(S_SUBTITLE), T_LABEL);
+  print_at(10, 1, TX(S_MOVE_KEYS), T_GOLD);   print_at(10, 20, TX(S_MOVE), T_VALUE);
+  print_at(11, 1, "1 2 3 / N", T_GOLD);       print_at(11, 20, TX(S_PICK), T_VALUE);
+  print_at(12, 1, TX(S_PLACE_KEYS), T_GOLD);  print_at(12, 20, TX(S_PLACE), T_VALUE);
+  print_at(13, 1, "C", T_GOLD);               print_at(13, 20, TX(S_SWAP), T_VALUE);
+  print_at(14, 1, "G", T_GOLD);               print_at(14, 20, TX(S_ROTATE), T_VALUE);
+  print_at(15, 1, "S", T_GOLD);               print_at(15, 20, TX(S_SOUND), T_VALUE);
 #ifdef MODEL128
-  print_at(16, 1, "M", T_GOLD);                 print_at(16, 20, "M" CH_U_ACUTE "SICA:", T_VALUE);
-  print_at(16, 27, music_on ? "S" CH_I_ACUTE " " : "NO", T_GOLD);
+  print_at(16, 1, "M", T_GOLD);               print_at(16, 20, TX(S_MUSIC_COLON), T_VALUE);
+  print_at(16, 20 + text_len(TX(S_MUSIC_COLON)), music_on ? TX(S_ON) : TX(S_OFF), T_GOLD);
 #endif
   if (!kempston_checked) { detect_kempston(); kempston_checked = 1; }
-  if (kempston) { print_at(17, 1, "KEMPSTON", T_GOLD); print_at(17, 20, "DISPARO", T_VALUE); }
-  print_at(19, 1, "L" CH_I_ACUTE "NEAS SEGUIDAS: RACHA HASTA x8", T_DIM);
-  print_at(20, 1, "BOMBA: ARRASA 3X3  PIEDRA: 2", T_DIM);
-  print_at(22, 9, "PULSA ESPACIO", A_FLASH | T_GOLD);
-  print_at(23, 0, "VERSI" CH_O_ACUTE "N " MODEL_NAME, T_DIM);
-  if (best) { print_at(23, 18, "R" CH_E_ACUTE "CORD", T_LABEL); print_right(23, 31, u32str(best), T_VALUE); }
+  if (kempston) { print_at(17, 1, "KEMPSTON", T_GOLD); print_at(17, 20, TX(S_FIRE), T_VALUE); }
+  print_at(18, 1, "L", T_GOLD);               print_at(18, 20, TX(S_LANGUAGE), T_VALUE);
+  print_at(19, 1, TX(S_RULE1), T_DIM);
+  print_at(20, 1, TX(S_RULE2), T_DIM);
+  print_center(22, TX(S_PRESS), A_FLASH | T_GOLD);
+  print_at(23, 0, VERSION " " MODEL_NAME, T_DIM);
+  if (best) { print_at(23, 18, TX(S_BEST), T_LABEL); print_right(23, 31, u32str(best), T_VALUE); }
+}
+
+static void title_screen(void) {
+  uint8_t t = 0;
+  draw_title();
   music_restart();
   wait_fire_release();
   for (;;) {
@@ -544,8 +560,9 @@ static void title_screen(void) {
     read_input();
     if (PRESSED(K_FIRE) || JPRESSED(K_FIRE)) break;
     if (PRESSED2(K2_S)) snd_on ^= 1;
+    if (PRESSED2(K2_L)) { lang ^= 1; draw_title(); }
 #ifdef MODEL128
-    if (PRESSED2(K2_M)) { music_on ^= 1; print_at(16, 27, music_on ? "S" CH_I_ACUTE " " : "NO", T_GOLD); }
+    if (PRESSED2(K2_M)) { music_on ^= 1; print_at(16, 20 + text_len(TX(S_MUSIC_COLON)), music_on ? TX(S_ON) : TX(S_OFF), T_GOLD); }
 #endif
     if ((t & 15) == 0) {   // la bomba del título chisporrotea
       spark ^= 1;

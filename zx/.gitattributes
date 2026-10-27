@@ -1,3 +1,4 @@
 *.sh text eol=lf
 *.tap binary
 *.sna binary
+*.scr binary

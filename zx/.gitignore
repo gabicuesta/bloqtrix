@@ -3,3 +3,4 @@ build/*.bin
 build/debug*
 build/bloqtrix48
 build/bloqtrix128
+release/

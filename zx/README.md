@@ -1,13 +1,17 @@
 # BLOQTRIX para ZX Spectrum
 
 > El puzle de bloques de 8×8 de la versión web, portado al ZX Spectrum en C con z88dk.
-> Dos variantes: **48K** con el *beeper* y **128K** con el chip de sonido AY y música.
+> Dos variantes: **48K** con el *beeper* y **128K** con el chip de sonido AY y música. En español y en inglés.
 
 🇬🇧 [English summary below](#-english)
 
 <p align="center">
-  <img src="docs/title.png" width="384" alt="Pantalla de título de BLOQTRIX en el Spectrum">
-  <img src="docs/game.png" width="384" alt="Partida en curso: tablero con bomba y piedra, marcador, racha y piezas">
+  <img src="docs/gameplay.gif" width="512" alt="Partida en el Spectrum 128K: piezas colocadas, líneas eliminadas, una bomba y la racha subiendo">
+</p>
+<p align="center">
+  <img src="docs/loading.png" width="256" alt="Pantalla de carga">
+  <img src="docs/title.png" width="256" alt="Pantalla de título">
+  <img src="docs/gameover.png" width="256" alt="Pantalla final con estadísticas">
 </p>
 
 ## Archivos para jugar
@@ -18,6 +22,7 @@
 | `build/bloqtrix128.tap` / `build/bloqtrix128.sna` | Spectrum 128K y +2 (en +2A/+3 debería funcionar, sin probar) | Chip AY: efectos y música |
 
 - **`.sna`** (instantánea): carga al momento en cualquier emulador (Fuse, ZEsarUX, Spectaculator, JSSpeccy…).
+- Los `.tap` llevan pantalla de carga. Las instrucciones en texto plano están en [INSTRUCCIONES.txt](INSTRUCCIONES.txt) y [INSTRUCTIONS.txt](INSTRUCTIONS.txt).
 - **`.tap`** (cinta): para emulador o para un Spectrum real (con un lector de tarjetas tipo divMMC o pasándolo
   a audio). En el 48K, `LOAD ""`; en el 128K, la opción *Tape Loader* del menú.
 
@@ -32,6 +37,7 @@
 | `G` | Girar 90° la pieza elegida |
 | `S` | Sonido sí/no |
 | `M` | Música sí/no (128K) |
+| `L` (en el título) | Idioma: español / inglés |
 | **Kempston** | Mover con la palanca y colocar con el disparo. Para cambiar de pieza, mantén el disparo y mueve a izquierda o derecha |
 
 ## Reglas (las mismas que en la web)
@@ -98,6 +104,9 @@ y Node.js (genera la tabla de notas):
 
 Crea `build/bloqtrix48.{tap,sna}` y `build/bloqtrix128.{tap,sna}`.
 
+Para publicar, `JSSPECCY=/ruta/a/jsspeccy-3.x tools/make_release.sh` crea en `release/` el paquete de descarga y el
+de juego en el navegador para itch.io.
+
 ## Estructura
 
 | Archivo | Qué hace |
@@ -106,6 +115,11 @@ Crea `build/bloqtrix48.{tap,sna}` y `build/bloqtrix128.{tap,sna}`.
 | `src/gfx.c` | Pantalla, atributos, fuente y dibujos de las casillas |
 | `src/sound48.c` / `src/sound128.c` | Sonido del beeper / del chip AY |
 | `src/main.c` | Interrupción, teclado y Kempston, título, partida y pantalla final |
+| `src/lang.h` | Todos los textos en español e inglés |
+| `assets/loading.scr` | Pantalla de carga (la genera `tools/make_loading.js`) |
+| `itch/index.html` | Página para jugar en el navegador en itch.io (con el emulador JSSpeccy 3) |
+| `tools/make_cover.js` | Portada de 630×500 para itch.io (`docs/cover.png`) |
+| `tools/make_release.sh` | Monta los paquetes de publicación en `release/` |
 | `tools/gen_notes.js` | Genera `src/notes.h` (frecuencias para beeper y AY) |
 | `tools/bench.c`, `tools/test_fits.c` | Medición de ciclos del reparto y prueba de la rutina en ensamblador (objetivo `+test` de z88dk) |
 
@@ -117,7 +131,8 @@ A ZX Spectrum port of BLOQTRIX, written in C with z88dk.
 - **48K build:** beeper sound effects.
 - **128K build:** AY sound effects plus music.
 
-**Load:** `.sna` snapshots load instantly in any emulator; `.tap` files work on real hardware.
+**Load:** `.sna` snapshots load instantly in any emulator; `.tap` files (with a loading screen) work on real hardware.
+Instructions: [INSTRUCTIONS.txt](INSTRUCTIONS.txt).
 
 **Controls:**
 - **Move:** QAOP or cursor keys.
@@ -125,6 +140,7 @@ A ZX Spectrum port of BLOQTRIX, written in C with z88dk.
 - **Place:** SPACE, ENTER or 0.
 - **Swap:** C. **Rotate:** G.
 - **Sound:** S. **Music (128K):** M.
+- **Language:** L on the title screen (Spanish / English).
 - **Kempston:** supported.
 
 **Gameplay:** the same rules as the web version.
